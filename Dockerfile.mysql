@@ -1,0 +1,18 @@
+FROM mysql:8.0
+
+LABEL maintainer="HomeStay Graduation Project"
+LABEL description="MySQL 8.0 image with HomeStay schema and seed data pre-configured"
+
+# Default environment variables
+ENV MYSQL_ROOT_PASSWORD=rootpassword \
+    MYSQL_DATABASE=homestay_db \
+    MYSQL_USER=homestay_user \
+    MYSQL_PASSWORD=homestay_password
+
+# Copy the database schema and seed data to the entrypoint directory
+# Any .sql file placed in /docker-entrypoint-initdb.d/ is automatically executed on first container boot
+COPY backend/database/schema.sql /docker-entrypoint-initdb.d/01_schema.sql
+
+EXPOSE 3306
+
+CMD ["--default-authentication-plugin=mysql_native_password", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
