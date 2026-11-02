@@ -56,11 +56,11 @@ const AdminReviews = () => {
     const breakdown = stats?.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
     return (
-        <div className="max-w-5xl space-y-8">
+        <div className="w-full space-y-8">
             <Title
                 align="left"
                 font="outfit"
-                title="Thống Kê Đánh Giá & Phản Hồi Về Homestay"
+                title="Thống Kê & Đánh Giá"
                 subTitle="Theo dõi mức độ hài lòng của du khách, phân bổ sao đánh giá và kiểm duyệt các nội dung phản hồi về các homestay trên hệ thống."
             />
 
@@ -97,7 +97,7 @@ const AdminReviews = () => {
 
             {/* Reviews List */}
             <div className="space-y-4">
-                <h3 className="font-bold text-gray-900 text-base">📝 Toàn bộ danh sách đánh giá & phản hồi</h3>
+                <h3 className="font-bold text-gray-900 text-base">Toàn bộ danh sách đánh giá & phản hồi</h3>
 
                 {loading ? (
                     <div className="py-12 text-gray-500">Đang tải danh sách đánh giá...</div>

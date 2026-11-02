@@ -75,40 +75,143 @@ export const assets = {
 
 
 export const cities = [
-    "Dubai",
-    "Singapore", 
-    "New York",
-    "London",
-    "Mumbai",
-    "Delhi",
-    "Bangalore",
-    "Goa",
-    "Kolkata",
-    "Chennai",
-    "Pune",
-    "Hyderabad",
-    "Jaipur",
-    "Kochi",
-    "Udaipur",
-    "Shimla",
-    "Manali",
-    "Rishikesh",
-    "Agra",
-    "Varanasi"
+    "Đà Lạt",
+    "Hà Nội", 
+    "TP. Hồ Chí Minh",
+    "Đà Nẵng",
+    "Nha Trang",
+    "Sa Pa",
+    "Phú Quốc",
+    "Hội An",
+    "Vũng Tàu",
+    "Ninh Bình",
+    "Huế",
+    "Quy Nhơn",
+    "Hạ Long",
+    "Phan Thiết",
+    "Cần Thơ"
 ];
 
-// Exclusive Offers Dummy Data
+// Exclusive Offers Data
 export const exclusiveOffers = [
-    { _id: 1, title: "Summer Escape Package", description: "Enjoy a complimentary night and daily breakfast", priceOff: 25, expiryDate: "Aug 31", image: exclusiveOfferCardImg1 },
-    { _id: 2, title: "Whispers of Romance Escape", description: "Special couples package including spa treatment", priceOff: 20, expiryDate: "Sep 20", image: exclusiveOfferCardImg2 },
-    { _id: 3, title: "Luxury Retreat", description: "Book 60 days in advance and save on your stay at any of our luxury properties worldwide.", priceOff: 30, expiryDate: "Sep 25", image: exclusiveOfferCardImg3 },
-]
+    {
+        _id: 1,
+        code: "SUMMER25",
+        title: "Gói Nghỉ Dưỡng Mùa Hè",
+        description: "Tặng 1 đêm nghỉ dưỡng kèm bữa sáng tự chọn đặc sản địa phương khi đặt phòng homestay từ 2 đêm.",
+        priceOff: 25,
+        maxDiscount: 500000,
+        minNights: 2,
+        expiryDate: "31/08/2026",
+        badge: "HOT DEAL",
+        category: "summer",
+        terms: [
+            "Giảm trực tiếp 25% tổng tiền phòng (tối đa 500.000 VNĐ).",
+            "Áp dụng cho các đơn đặt từ 2 đêm trở lên trong mùa hè này.",
+            "Miễn phí bữa sáng tự chọn đặc sản tại homestay.",
+            "Cho phép thay đổi lịch đặt trước 48h miễn phí."
+        ],
+        image: exclusiveOfferCardImg1
+    },
+    {
+        _id: 2,
+        code: "ROMANCE20",
+        title: "Kỳ Nghỉ Lãng Mạn Cặp Đôi",
+        description: "Gói tuần trăng mật đặc biệt bao gồm liệu trình spa thư giãn, hoa tươi và rượu vang chúc mừng.",
+        priceOff: 20,
+        maxDiscount: 400000,
+        minNights: 1,
+        expiryDate: "20/09/2026",
+        badge: "LÃNG MẠN",
+        category: "couple",
+        terms: [
+            "Giảm 20% cho phòng đôi, phòng Suite hoặc Villa riêng tư (tối đa 400.000 VNĐ).",
+            "Tặng set trà chiều bánh ngọt và hoa tươi chào đón tại phòng.",
+            "Ưu đãi giảm 30% gói dịch vụ spa & tiệc tối riêng cho 2 người.",
+            "Áp dụng cho mọi homestay trên toàn quốc."
+        ],
+        image: exclusiveOfferCardImg2
+    },
+    {
+        _id: 3,
+        code: "EARLYBIRD30",
+        title: "Ưu Đãi Đặt Sớm Homestay",
+        description: "Đặt trước 14 ngày để nhận mức giá ưu đãi tốt nhất trên toàn hệ thống homestay Việt Nam.",
+        priceOff: 30,
+        maxDiscount: 600000,
+        minNights: 1,
+        expiryDate: "25/09/2026",
+        badge: "TIẾT KIỆM 30%",
+        category: "early",
+        terms: [
+            "Giảm 30% tổng hóa đơn khi đặt trước ngày nhận phòng tối thiểu 14 ngày (tối đa 600.000 VNĐ).",
+            "Áp dụng cho toàn bộ danh mục homestay và khu nghỉ dưỡng.",
+            "Hỗ trợ dời ngày lưu trú 1 lần miễn phí trước 7 ngày.",
+            "Không áp dụng đồng thời với các voucher ưu đãi khác."
+        ],
+        image: exclusiveOfferCardImg3
+    },
+    {
+        _id: 4,
+        code: "WEEKEND15",
+        title: "Cuối Tuần Thảnh Thơi",
+        description: "Nạp năng lượng cuối tuần với không gian xanh mát, tiệc nướng BBQ ngoài trời và trà thảo mộc.",
+        priceOff: 15,
+        maxDiscount: 300000,
+        minNights: 1,
+        expiryDate: "31/10/2026",
+        badge: "CUỐI TUẦN",
+        category: "weekend",
+        terms: [
+            "Giảm 15% tổng tiền phòng (tối đa 300.000 VNĐ) cho các ngày Thứ 6, Thứ 7 hoặc Chủ Nhật.",
+            "Miễn phí sử dụng bếp nướng BBQ và khu sinh hoạt chung.",
+            "Hỗ trợ nhận phòng sớm hoặc trả phòng muộn đến 14:00 (nếu còn phòng trống)."
+        ],
+        image: roomImg2
+    },
+    {
+        _id: 5,
+        code: "WELCOME10",
+        title: "Chào Mừng Khách Hàng Mới",
+        description: "Ưu đãi đặc quyền dành riêng cho lần đầu tiên trải nghiệm dịch vụ lưu trú tại HomeStay.",
+        priceOff: 10,
+        maxDiscount: 200000,
+        minNights: 1,
+        expiryDate: "31/12/2026",
+        badge: "THÀNH VIÊN",
+        category: "all",
+        terms: [
+            "Giảm ngay 10% (tối đa 200.000 VNĐ) cho đơn đặt phòng đầu tiên của tài khoản.",
+            "Không yêu cầu số đêm tối thiểu hay giới hạn địa điểm.",
+            "Tự động tích lũy điểm thưởng thành viên sau khi check-out."
+        ],
+        image: roomImg1
+    },
+    {
+        _id: 6,
+        code: "LONGSTAY25",
+        title: "Lưu Trú Dài Ngày Siêu Tiết Kiệm",
+        description: "Trải nghiệm cuộc sống như người bản địa với mức giá ưu đãi khi lưu trú từ 4 đêm trở lên.",
+        priceOff: 25,
+        maxDiscount: 800000,
+        minNights: 4,
+        expiryDate: "15/11/2026",
+        badge: "DÀI NGÀY",
+        category: "longstay",
+        terms: [
+            "Giảm 25% tổng tiền phòng cho kỳ nghỉ từ 4 đêm trở lên (tối đa 800.000 VNĐ).",
+            "Miễn phí dịch vụ giặt ủi đồ cơ bản và dọn phòng định kỳ.",
+            "Cung cấp gói hướng dẫn viên bản địa tư vấn lịch trình khám phá địa phương."
+        ],
+        image: roomImg4
+    }
+];
 
 // Testimonials Dummy Data
 export const testimonials = [
-    { id: 1, name: "Rajesh Kumar", address: "Mumbai, India", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200", rating: 5, review: "HomeStay made my business trip to Delhi absolutely seamless. The hotel recommendations were perfect, and the booking process was so smooth. I felt like I was staying at a 5-star property!" },
-    { id: 2, name: "Emma Rodriguez", address: "Barcelona, Spain", image: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200", rating: 5, review: "I've used many booking platforms before, but none compare to the personalized experience and attention to detail that HomeStay provides." },
-    { id: 3, name: "Priya Sharma", address: "Bangalore, India", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200", rating: 5, review: "As a frequent traveler, I've tried many platforms, but HomeStay's attention to detail and customer service is unmatched. The hotels they recommend always exceed my expectations!" }
+    { id: 1, name: "Nguyễn Minh Tuấn", address: "Hà Nội", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200", rating: 5, review: "HomeStay giúp chuyến đi Đà Lạt của gia đình tôi vô cùng trọn vẹn. Homestay đẹp đúng như ảnh, không gian ấm cúng và chủ nhà rất thân thiện!" },
+    { id: 2, name: "Trần Thị Mai Anh", address: "TP. Hồ Chí Minh", image: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200", rating: 5, review: "Tôi đã trải nghiệm nhiều ứng dụng đặt phòng nhưng HomeStay mang lại sự tiện lợi và tin cậy nhất. Giá cả minh bạch, không phí ẩn." },
+    { id: 3, name: "Lê Hoàng Long", address: "Đà Nẵng", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200", rating: 5, review: "Dịch vụ tuyệt vời, kiểm tra phòng trống chính xác và nhận phòng cực kỳ nhanh gọn. Chắc chắn tôi sẽ tiếp tục sử dụng HomeStay cho các chuyến đi tới!" }
 ];
 
 // Facility Icon
@@ -122,10 +225,10 @@ export const facilityIcons = {
 
 // For Room Details Page
 export const roomCommonData = [
-    { icon: assets.homeIcon, title: "Clean & Safe Stay", description: "A well-maintained and hygienic space just for you." },
-    { icon: assets.badgeIcon, title: "Enhanced Cleaning", description: "This host follows Staybnb's strict cleaning standards." },
-    { icon: assets.locationFilledIcon, title: "Excellent Location", description: "90% of guests rated the location 5 stars." },
-    { icon: assets.heartIcon, title: "Smooth Check-In", description: "100% of guests gave check-in a 5-star rating." },
+    { icon: assets.homeIcon, title: "Không gian sạch sẽ & An toàn", description: "Không gian được dọn dẹp vệ sinh và khử trùng kỹ càng trước mỗi lượt khách." },
+    { icon: assets.badgeIcon, title: "Tiêu chuẩn vệ sinh cao cấp", description: "Chủ nhà tuân thủ quy chuẩn vệ sinh và giữ gìn không gian nghỉ ngơi đạt chuẩn." },
+    { icon: assets.locationFilledIcon, title: "Vị trí đắc địa & Thuận tiện", description: "Hơn 95% khách lưu trú đánh giá vị trí 5 sao, gần trung tâm và danh lam thắng cảnh." },
+    { icon: assets.heartIcon, title: "Nhận phòng nhanh chóng", description: "Thủ tục check-in đơn giản, linh hoạt và được chủ homestay hỗ trợ chu đáo." },
 ];
 
 // User Dummy Data
@@ -161,8 +264,8 @@ export const roomsDummyData = [
     {
         "_id": "67f7647c197ac559e4089b96",
         "hotel": hotelDummyData,
-        "roomType": "Double Bed",
-        "pricePerNight": 399,
+        "roomType": "Phòng đôi",
+        "pricePerNight": 399000,
         "amenities": ["Room Service", "Mountain View", "Pool Access"],
         "images": [roomImg1, roomImg2, roomImg3, roomImg4],
         "isAvailable": true,
@@ -173,8 +276,8 @@ export const roomsDummyData = [
     {
         "_id": "67f76452197ac559e4089b8e",
         "hotel": hotelDummyData,
-        "roomType": "Double Bed",
-        "pricePerNight": 299,
+        "roomType": "Phòng đôi",
+        "pricePerNight": 299000,
         "amenities": ["Room Service", "Mountain View", "Pool Access"],
         "images": [roomImg2, roomImg3, roomImg4, roomImg1],
         "isAvailable": true,
@@ -185,8 +288,8 @@ export const roomsDummyData = [
     {
         "_id": "67f76406197ac559e4089b82",
         "hotel": hotelDummyData,
-        "roomType": "Double Bed",
-        "pricePerNight": 249,
+        "roomType": "Phòng đôi",
+        "pricePerNight": 249000,
         "amenities": ["Free WiFi", "Free Breakfast", "Room Service"],
         "images": [roomImg3, roomImg4, roomImg1, roomImg2],
         "isAvailable": true,
@@ -197,8 +300,8 @@ export const roomsDummyData = [
     {
         "_id": "67f763d8197ac559e4089b7a",
         "hotel": hotelDummyData,
-        "roomType": "Single Bed",
-        "pricePerNight": 199,
+        "roomType": "Phòng đơn",
+        "pricePerNight": 199000,
         "amenities": ["Free WiFi", "Room Service", "Pool Access"],
         "images": [roomImg4, roomImg1, roomImg2, roomImg3],
         "isAvailable": true,

@@ -16,7 +16,7 @@ const Testimonial = () => {
         <div className={`text-center mb-16 transition-all duration-1000 ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
         }`}>
-          <Title title={`What Our Guests Say`} subTitle={`Discover why discerning travellers consistently choose HomeStay for their exclusive and luxurious accommodations around the world.`}/>
+          <Title title={`Cảm Nhận Từ Du Khách`} subTitle={`Lắng nghe những chia sẻ và đánh giá thực tế từ khách du lịch đã trải nghiệm không gian homestay tuyệt vời cùng chúng tôi.`}/>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
@@ -46,12 +46,12 @@ const Testimonial = () => {
               
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Verified Guest</span>
+                  <span className="text-sm text-gray-500">Du khách đã ở</span>
                   <div className="flex items-center gap-1">
                     <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-sm text-green-600 font-medium">Verified</span>
+                    <span className="text-sm text-green-600 font-medium">Đã xác thực</span>
                   </div>
                 </div>
               </div>

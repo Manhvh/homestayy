@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 const UserMenu = () => {
-  const { user, isOwner, isAdmin, userRole, logout, navigate } = useAppContext();
+  const { user, isOwner, isAdmin, userRole, logout, navigate, openProfileModal } = useAppContext();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -55,10 +55,33 @@ const UserMenu = () => {
               {roleBadge()}
             </div>
             <p className="text-xs text-gray-500 truncate">{user.email}</p>
+            {user.phone ? (
+              <p className="text-xs text-blue-600 mt-1 truncate font-medium">SĐT: {user.phone}</p>
+            ) : (
+              <button
+                onClick={() => {
+                  openProfileModal();
+                  setIsOpen(false);
+                }}
+                className="text-[11px] text-amber-600 hover:text-amber-700 hover:underline mt-1 block text-left font-medium cursor-pointer"
+              >
+                + Thêm số điện thoại
+              </button>
+            )}
           </div>
 
           {/* Menu Items */}
           <div className="py-1 text-sm font-medium">
+            <button
+              onClick={() => {
+                openProfileModal();
+                setIsOpen(false);
+              }}
+              className="w-full text-left px-4 py-2.5 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 transition cursor-pointer"
+            >
+              <span>Thông tin cá nhân</span>
+            </button>
+
             <button
               onClick={() => {
                 navigate('/my-bookings');
@@ -66,7 +89,6 @@ const UserMenu = () => {
               }}
               className="w-full text-left px-4 py-2.5 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 transition cursor-pointer"
             >
-              <span>📑</span>
               <span>Lịch sử đặt phòng</span>
             </button>
 
@@ -78,7 +100,6 @@ const UserMenu = () => {
                 }}
                 className="w-full text-left px-4 py-2.5 hover:bg-purple-50 hover:text-purple-600 flex items-center gap-3 transition cursor-pointer"
               >
-                <span>🏡</span>
                 <span>Kênh Quản trị Homestay</span>
               </button>
             )}
@@ -91,8 +112,7 @@ const UserMenu = () => {
                 }}
                 className="w-full text-left px-4 py-2.5 hover:bg-rose-50 hover:text-rose-600 flex items-center gap-3 transition cursor-pointer"
               >
-                <span>🛡️</span>
-                <span>Bảng điều khiển Admin</span>
+                <span>Bảng điều khiển</span>
               </button>
             )}
           </div>
@@ -106,7 +126,6 @@ const UserMenu = () => {
               }}
               className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 flex items-center gap-3 transition cursor-pointer text-sm font-medium"
             >
-              <span>🚪</span>
               <span>Đăng xuất</span>
             </button>
           </div>

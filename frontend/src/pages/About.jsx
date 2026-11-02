@@ -17,24 +17,23 @@ const About = () => {
       <div className={`max-w-5xl mx-auto mb-20 text-center transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
         <div className="inline-block mb-12">
           <div className="inline-flex items-center gap-3 bg-gray-900 text-white px-6 py-3 rounded-full text-sm font-semibold mb-8">
-            <span>🏨</span>
-            <span>About HomeStay</span>
+            <span>Về Chúng Tôi - HomeStay</span>
           </div>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-playfair font-bold text-gray-900 mb-6 leading-tight">
-            Redefining
-            <span className="block text-gray-600">Luxury Travel</span>
+            Nâng Tầm Trải Nghiệm
+            <span className="block text-gray-600">Nghỉ Dưỡng Đẳng Cấp</span>
           </h2>
           <div className="w-32 h-1 bg-gray-900 mx-auto rounded-full"></div>
         </div>
         <div className="max-w-4xl mx-auto">
           <p className="text-xl md:text-2xl text-gray-600 leading-relaxed mb-8">
-            <strong className="text-gray-900">HomeStay</strong> is a premium hotel booking platform
-            designed for the discerning traveler who seeks exceptional experiences.
+            <strong className="text-gray-900">HomeStay</strong> là nền tảng kết nối và đặt phòng lưu trú cao cấp,
+            mang đến cho du khách những trải nghiệm nghỉ dưỡng khác biệt và trọn vẹn nhất.
           </p>
           <p className="text-lg text-gray-500 leading-relaxed">
-            Whether you're planning a luxurious retreat, a business trip, or an adventurous escape, 
-            HomeStay connects you with the world's finest accommodations. Our platform combines 
-            cutting-edge technology with personalized service to deliver unforgettable stays.
+            Dù bạn đang lên kế hoạch cho một kỳ nghỉ dưỡng sang trọng, một chuyến công tác thuận tiện, hay chuyến khám phá vùng đất mới, 
+            HomeStay luôn đồng hành để kết nối bạn với những căn phòng tuyệt vời nhất. Nền tảng của chúng tôi kết hợp 
+            công nghệ hiện đại với sự tận tâm nhằm mang lại dịch vụ hoàn hảo cho từng kỳ nghỉ.
           </p>
         </div>
       </div>
@@ -45,49 +44,49 @@ const About = () => {
           isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
         }`}>
           <h3 className="text-2xl md:text-3xl font-playfair font-bold text-gray-900 mb-4">
-            Why Choose HomeStay?
+            Tại Sao Nên Chọn HomeStay?
           </h3>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Experience the perfect blend of technology and hospitality
+            Sự kết hợp hoàn hảo giữa công nghệ tiện ích và trải nghiệm mến khách
           </p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {[
             {
-              title: "Smart Booking System",
-              desc: "Real-time availability checks, date validation, and seamless booking flow with instant confirmations.",
-              icon: "🎯",
+              title: "Hệ Thống Đặt Phòng Thông Minh",
+              desc: "Kiểm tra phòng trống theo thời gian thực, xác thực ngày nhận/trả và quy trình đặt phòng tức thì.",
+              step: "01",
               color: "from-blue-500 to-blue-600"
             },
             {
-              title: "Hotel Owner Dashboard",
-              desc: "Comprehensive management tools for rooms, availability, revenue tracking, and guest analytics.",
-              icon: "🏨",
+              title: "Kênh Quản Trị Dành Cho Chủ Nhà",
+              desc: "Công cụ quản lý toàn diện: danh sách phòng, giá theo mùa, theo dõi lịch đặt và doanh thu dễ dàng.",
+              step: "02",
               color: "from-purple-500 to-purple-600"
             },
             {
-              title: "Luxury-Focused Design",
-              desc: "Elegant, intuitive interface built with modern technologies for the ultimate user experience.",
-              icon: "✨",
+              title: "Giao Diện Hiện Đại & Sang Trọng",
+              desc: "Thiết kế thanh lịch, trực quan trên mọi thiết bị mang lại trải nghiệm tiện nghi nhất cho du khách.",
+              step: "03",
               color: "from-indigo-500 to-indigo-600"
             },
             {
-              title: "Secure Authentication",
-              desc: "Bank-level security with encrypted payments and protected user data for peace of mind.",
-              icon: "🔐",
+              title: "Bảo Mật & An Toàn Tuyệt Đối",
+              desc: "Bảo vệ thông tin cá nhân và quản lý thanh toán an toàn, minh bạch giúp bạn hoàn toàn an tâm.",
+              step: "04",
               color: "from-green-500 to-green-600"
             },
             {
-              title: "Lightning Fast",
-              desc: "Optimized performance across all devices with instant loading and smooth interactions.",
-              icon: "⚡",
+              title: "Tốc Độ Nhanh Chóng & Ổn Định",
+              desc: "Hệ thống tối ưu hóa hiệu năng vượt trội, tải trang tức thì và hoạt động mượt mà trên di động lẫn máy tính.",
+              step: "05",
               color: "from-orange-500 to-orange-600"
             },
             {
-              title: "24/7 Support",
-              desc: "Round-the-clock customer service and dedicated support for both guests and hotel partners.",
-              icon: "💬",
+              title: "Hỗ Trợ Khách Hàng 24/7",
+              desc: "Đội ngũ chăm sóc khách hàng và hỗ trợ đối tác chủ nhà luôn sẵn sàng đồng hành trên mọi hành trình.",
+              step: "06",
               color: "from-teal-500 to-teal-600"
             },
           ].map((feature, idx) => (
@@ -101,8 +100,8 @@ const About = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <div className="relative z-10">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center text-2xl shadow-lg`}>
-                    {feature.icon}
+                  <div className={`w-14 h-14 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center font-bold text-white text-lg shadow-md`}>
+                    {feature.step}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -116,17 +115,6 @@ const About = () => {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className={`text-center mt-28 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-        <div className="inline-flex items-center gap-2 bg-white px-6 py-3 rounded-lg border border-gray-200 shadow-sm">
-          <span className="text-gray-500 text-sm">© {new Date().getFullYear()}</span>
-          <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-          <span className="text-gray-500 text-sm font-medium">Aditya</span>
-          <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-          <span className="text-gray-700 text-sm font-semibold">HomeStay Project</span>
         </div>
       </div>
     </div>

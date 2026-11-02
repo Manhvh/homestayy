@@ -95,7 +95,7 @@ const ManageHotel = () => {
                                         ? "bg-amber-100 text-amber-700" 
                                         : "bg-red-100 text-red-700"
                             }`}>
-                                {hotelData.status === "approved" ? "✓ Đã được phê duyệt" : hotelData.status === "pending" ? "⏳ Đang chờ duyệt" : "✕ Bị từ chối"}
+                                {hotelData.status === "approved" ? "Đã được phê duyệt" : hotelData.status === "pending" ? "Đang chờ duyệt" : "Bị từ chối"}
                             </span>
                         </div>
                     </div>

@@ -1,17 +1,22 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { assets } from '../assets/assets'
-
+import { useAppContext } from '../context/AppContext'
 
 const HotelCard = ({room, index}) => {
+  const { currency } = useAppContext();
+  const roomId = room.id || room._id;
+  const hotel = room.hotel || {};
+  const images = Array.isArray(room.images) && room.images.length > 0 ? room.images : [assets.roomImg1];
+
   return (
-    <Link to={'/rooms/'+room._id} onClick={()=> scrollTo(0,0)} key={room._id} 
+    <Link to={'/rooms/' + roomId} onClick={() => scrollTo(0, 0)} key={roomId} 
     className='group relative w-full bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-gray-200 flex flex-col'>
         {/* Mobile Design - Large Image (60-65% of card height) */}
         <div className="md:hidden">
           <div className="relative overflow-hidden h-64">
             <img 
-              src={room.images[0]} 
+              src={images[0]} 
               alt="hotel room"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 rounded-t-2xl"
             />
@@ -28,23 +33,28 @@ const HotelCard = ({room, index}) => {
 
           {/* Content Section */}
           <div className='p-5'>
-            {/* Hotel Name */}
-            <h3 className='text-lg font-semibold text-gray-900 mb-2 line-clamp-2'>
-              {room.hotel.name}
-            </h3>
+            {/* Hotel Name and Capacity */}
+            <div className='flex items-center justify-between gap-2 mb-2'>
+              <h3 className='text-lg font-semibold text-gray-900 line-clamp-1'>
+                {hotel.name || "Homestay"}
+              </h3>
+              <span className="text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 flex-shrink-0">
+                Tối đa {room.maxGuests || 2} người
+              </span>
+            </div>
             
             {/* Location with pin icon */}
             <div className='flex items-center gap-2 text-sm text-gray-600 mb-3'>
               <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
-              <span className="truncate">{room.hotel.address}</span>
+              <span className="truncate">{hotel.address || "Việt Nam"}</span>
             </div>
 
             {/* Price */}
             <div className='mb-3'>
               <p className='text-lg font-semibold text-gray-900'>
-                ${room.pricePerNight}<span className='text-sm font-normal text-gray-500'> / night</span>
+                {Number(room.pricePerNight).toLocaleString('vi-VN')} {currency}<span className='text-sm font-normal text-gray-500'> / đêm</span>
               </p>
             </div>
 
@@ -57,16 +67,16 @@ const HotelCard = ({room, index}) => {
                   </svg>
                 ))}
               </div>
-              <span className="text-sm text-gray-500 ml-1">(120 reviews)</span>
+              <span className="text-sm text-gray-500 ml-1">({room.reviews?.length || 12} đánh giá)</span>
             </div>
           </div>
         </div>
 
         {/* Desktop Design - Original Layout */}
-        <div className="hidden md:flex flex-col h-[420px]">
+        <div className="hidden md:flex flex-col">
           <div className="relative overflow-hidden h-40 flex-shrink-0">
             <img 
-              src={room.images[0]} 
+              src={images[0]} 
               alt="hotel room"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
@@ -75,64 +85,69 @@ const HotelCard = ({room, index}) => {
             {index % 2 === 0 && 
             <div className='absolute top-3 left-3'>
               <span className='px-3 py-1 text-xs bg-white text-gray-800 font-medium rounded-full shadow-sm border border-gray-200'>
-                Best Seller
+                Yêu thích
               </span>
             </div>}
             
             {/* Price badge */}
             <div className='absolute top-3 right-3'>
               <span className='px-3 py-1 text-sm bg-white text-gray-800 font-semibold rounded-lg shadow-sm border border-gray-200'>
-                ${room.pricePerNight}
+                {Number(room.pricePerNight).toLocaleString('vi-VN')} {currency}
               </span>
             </div>
           </div>
 
-          <div className='p-5 flex flex-col flex-grow min-h-0'>
-            {/* Hotel name and rating */}
-            <div className='flex items-start justify-between mb-3 flex-shrink-0'>
-                <div className="flex-1 min-w-0">
-                  <h3 className='font-playfair text-xl font-semibold text-gray-900 mb-1 line-clamp-2'>
-                    {room.hotel.name}
-                  </h3>
-                  <p className="text-sm text-gray-500">{room.roomType}</p>
+            <div className='p-5 flex flex-col flex-grow min-h-0'>
+                {/* Hotel name and rating */}
+                <div className='flex items-start justify-between mb-3 flex-shrink-0'>
+                    <div className="flex-1 min-w-0">
+                        <h3 className='font-playfair text-xl font-semibold text-gray-900 mb-1 line-clamp-2'>
+                            {hotel.name || "Homestay"}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">{room.roomType}</span>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-xs text-blue-600 font-medium">Tối đa {room.maxGuests || 2} khách</span>
+                        </div>
+                    </div>
+                    <div className='flex items-center gap-1 flex-shrink-0 ml-2'>
+                        <img src={assets.starIconFilled} alt="starIcon" className="w-4 h-4"/>
+                        <span className="text-sm font-medium text-gray-700">4.8</span>
+                    </div>
                 </div>
-                <div className='flex items-center gap-1 flex-shrink-0 ml-2'>
-                    <img src={assets.starIconFilled} alt="starIcon" className="w-4 h-4" />
-                    <span className="text-sm font-medium text-gray-700">4.5</span>
+
+                {/* Location */}
+                <div className='flex items-center gap-2 text-sm text-gray-600 mb-3 flex-shrink-0'>
+                    <img src={assets.locationIcon} alt="locationIcon" className="w-4 h-4 flex-shrink-0"/>
+                    <span className="truncate">{room.hotel.address}</span>
                 </div>
-            </div>
 
-            {/* Location */}
-            <div className='flex items-center gap-2 text-sm text-gray-600 mb-3 flex-shrink-0'>
-                <img src={assets.locationIcon} alt="locationIcon" className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">{room.hotel.address}</span>
-            </div>
-
-            {/* Amenities preview */}
-            <div className="flex items-center gap-2 mb-3 flex-wrap flex-grow min-h-0">
-              {room.amenities.slice(0, 2).map((amenity, idx) => (
-                <span key={idx} className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md flex-shrink-0">
+                {/* Amenities preview */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap flex-grow min-h-0">
+                    {room.amenities.slice(0, 2).map((amenity, idx) => (
+                        <span key={idx}
+                              className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md flex-shrink-0">
                   {amenity}
                 </span>
-              ))}
-              {room.amenities.length > 2 && (
-                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md flex-shrink-0">
-                  +{room.amenities.length - 2} more
+                    ))}
+                    {room.amenities.length > 2 && (
+                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md flex-shrink-0">
+                  +{room.amenities.length - 2} tiện ích khác
                 </span>
-              )}
-            </div>
-
-            {/* Price and Book button */}
-            <div className='flex items-center justify-between mt-auto flex-shrink-0'>
-                <div>
-                  <p className='text-sm text-gray-500'>Starting from</p>
-                  <p className='text-xl font-bold text-gray-900'>${room.pricePerNight}<span className='text-sm font-normal text-gray-500'>/night</span></p>
+                    )}
                 </div>
-                <button className='px-5 py-2.5 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-all duration-200 flex-shrink-0'>
-                  Book Now
+
+                {/* Price and Book button */}
+                <div className='flex items-center justify-between mt-auto flex-shrink-0'>
+                    <p className='text-xs text-gray-500'>Chỉ từ</p>
+                    <p className='text-sm font-bold text-gray-900'>{Number(room.pricePerNight).toLocaleString('vi-VN')} {currency}<span
+                        className='text-sm font-normal text-gray-500'> / đêm</span></p>
+                </div>
+                <button
+                    className='px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all duration-200 flex-shrink-0 cursor-pointer shadow-sm mt-2'>
+                    Xem phòng
                 </button>
             </div>
-          </div>
         </div>
     </Link>
   )

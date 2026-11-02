@@ -71,11 +71,11 @@ const AdminUsers = () => {
     );
 
     return (
-        <div className="max-w-6xl space-y-6">
+        <div className="w-full space-y-6">
             <Title
                 align="left"
                 font="outfit"
-                title="Quản Lý Người Dùng & Phân Quyền"
+                title="Quản Lý Người Dùng"
                 subTitle="Theo dõi danh sách toàn bộ tài khoản khách hàng, chủ nhà và quản trị viên; phân quyền vai trò và xử lý tài khoản vi phạm."
             />
 
@@ -83,7 +83,7 @@ const AdminUsers = () => {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <input
                     type="text"
-                    placeholder="🔍 Tìm kiếm theo tên hoặc email người dùng..."
+                    placeholder="Tìm kiếm theo tên hoặc email người dùng..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     className="w-full sm:w-80 border border-gray-300 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500 bg-white"
@@ -99,10 +99,10 @@ const AdminUsers = () => {
                 <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold text-xs uppercase">
+                            <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
                                 <tr>
                                     <th className="py-3 px-4">Người dùng</th>
-                                    <th className="py-3 px-4">Email</th>
+                                    <th className="py-3 px-4">Email / SĐT</th>
                                     <th className="py-3 px-4 text-center">Vai trò</th>
                                     <th className="py-3 px-4 text-center">Đơn đã đặt</th>
                                     <th className="py-3 px-4 text-center">Trạng thái</th>
@@ -115,7 +115,7 @@ const AdminUsers = () => {
                                         <td className="py-3 px-4">
                                             <div className="flex items-center gap-3">
                                                 <img
-                                                    src={user.image}
+                                                    src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.username || 'User')}`}
                                                     alt="avatar"
                                                     className="w-9 h-9 rounded-full object-cover border border-gray-200"
                                                 />
@@ -130,19 +130,22 @@ const AdminUsers = () => {
                                             </div>
                                         </td>
 
-                                        <td className="py-3 px-4 text-gray-600 text-xs">
-                                            {user.email}
+                                        <td className="py-3 px-4 text-xs">
+                                            <p className="font-medium text-gray-800">{user.email}</p>
+                                            <p className="text-[11px] text-gray-500 mt-0.5">
+                                                SĐT: <span className={user.phone ? "text-blue-600 font-medium" : "text-gray-400"}>{user.phone || "Chưa cập nhật"}</span>
+                                            </p>
                                         </td>
 
                                         <td className="py-3 px-4 text-center">
                                             <select
                                                 value={user.role}
                                                 onChange={e => handleRoleChange(user._id, e.target.value)}
-                                                className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white text-gray-700 outline-none focus:ring-1 focus:ring-purple-500"
+                                                className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white text-gray-700 outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer shadow-2xs"
                                             >
-                                                <option value="user">User (Khách)</option>
-                                                <option value="hotelOwner">Hotel Owner (Chủ nhà)</option>
-                                                <option value="admin">Admin (Quản trị viên)</option>
+                                                <option value="user">Khách hàng</option>
+                                                <option value="hotelOwner">Chủ homestay</option>
+                                                <option value="admin">Admin</option>
                                             </select>
                                         </td>
 

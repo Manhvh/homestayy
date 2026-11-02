@@ -60,7 +60,7 @@ const ScheduleCalendar = () => {
             <Title
                 align="left"
                 font="outfit"
-                title="Theo Dõi Lịch Đặt Phòng (Booking Schedule)"
+                title="Theo Dõi Lịch Đặt Phòng"
                 subTitle="Theo dõi chi tiết các lượt khách đang lưu trú, các đợt khách sắp nhận phòng và lịch sử các chuyến đi tại homestay của bạn."
             />
 
@@ -76,7 +76,7 @@ const ScheduleCalendar = () => {
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
-                        {st === 'all' ? 'Tất cả đơn' : st === 'confirmed' ? '✓ Đã duyệt' : st === 'pending' ? '⏳ Chờ duyệt' : '✕ Đã hủy'}
+                        {st === 'all' ? 'Tất cả đơn' : st === 'confirmed' ? 'Đã duyệt' : st === 'pending' ? 'Chờ duyệt' : 'Đã hủy'}
                     </button>
                 ))}
             </div>
@@ -106,7 +106,7 @@ const ScheduleCalendar = () => {
                                         </div>
                                         <div className="mt-3 text-xs text-gray-600 pt-2 border-t border-green-200 flex justify-between">
                                             <span>Trả phòng: <strong>{new Date(b.checkOutDate).toLocaleDateString()}</strong></span>
-                                            <span>Tổng: <strong>{currency}{b.totalPrice}</strong></span>
+                                            <span>Tổng: <strong>{Number(b.totalPrice).toLocaleString('vi-VN')} {currency}</strong></span>
                                         </div>
                                     </div>
                                 ))}
@@ -170,7 +170,7 @@ const ScheduleCalendar = () => {
                                             <td className="py-2 px-3 font-medium">{b.user?.username || "Khách"}</td>
                                             <td className="py-2 px-3">{b.room?.roomType}</td>
                                             <td className="py-2 px-3">{new Date(b.checkInDate).toLocaleDateString()} - {new Date(b.checkOutDate).toLocaleDateString()}</td>
-                                            <td className="py-2 px-3 font-semibold">{currency}{b.totalPrice}</td>
+                                            <td className="py-2 px-3 font-semibold">{Number(b.totalPrice).toLocaleString('vi-VN')} {currency}</td>
                                             <td className="py-2 px-3">
                                                 <span className={b.status === 'cancelled' ? 'text-red-500' : 'text-gray-500'}>
                                                     {b.status === 'cancelled' ? 'Đã hủy' : 'Hoàn tất'}

@@ -90,11 +90,11 @@ const AdminCategories = () => {
     const currentList = activeTab === 'amenity' ? amenities : cities;
 
     return (
-        <div className="max-w-5xl space-y-6">
+        <div className="w-full space-y-6">
             <Title
                 align="left"
                 font="outfit"
-                title="Quản Lý Danh Mục (Tiện Ích & Khu Vực)"
+                title="Quản Lý Danh Mục"
                 subTitle="Thiết lập danh mục các dịch vụ tiện ích của homestay và danh sách các tỉnh thành / điểm đến du lịch trên toàn quốc."
             />
 
@@ -108,7 +108,7 @@ const AdminCategories = () => {
                             : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                    🛁 Danh mục Tiện ích ({amenities.length})
+                    Danh mục Tiện ích ({amenities.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('city')}
@@ -118,7 +118,7 @@ const AdminCategories = () => {
                             : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                    📍 Danh mục Khu vực / Thành phố ({cities.length})
+                    Danh mục Khu vực ({cities.length})
                 </button>
             </div>
 

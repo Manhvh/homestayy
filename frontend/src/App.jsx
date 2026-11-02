@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Navbar from "./components/Navbar";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import Footer from "./components/Footer";
 import AllRooms from "./pages/AllRooms";
@@ -8,6 +8,7 @@ import RoomDetails from "./pages/RoomDetails";
 import About from "./pages/About";
 import Experience from "./pages/Experience";
 import MyBookings from "./pages/MyBookings";
+import Profile from "./pages/Profile";
 import HotelRegistration from "./components/HotelRegistration";
 import Layout from "./pages/hotelOwner/Layout";
 import Dashboard from "./pages/hotelOwner/Dashboard";
@@ -15,6 +16,7 @@ import AddRoom from "./pages/hotelOwner/AddRoom";
 import ListRoom from "./pages/hotelOwner/ListRoom";
 import ManageHotel from "./pages/hotelOwner/ManageHotel";
 import ScheduleCalendar from "./pages/hotelOwner/ScheduleCalendar";
+import ManageOffers from "./pages/hotelOwner/ManageOffers";
 
 // Admin Pages
 import AdminLayout from "./pages/admin/Layout";
@@ -29,10 +31,19 @@ import { useAppContext } from "./context/AppContext";
 import Loader from "./components/Loader";
 
 const App = () => {
-  const pathname = useLocation().pathname;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = location.pathname;
   const isOwnerPath = pathname.includes("owner");
   const isAdminPath = pathname.includes("admin");
-  const { showHotelRegistration } = useAppContext();
+  const { showHotelRegistration, isAdmin } = useAppContext();
+
+  useEffect(() => {
+    // Admin accounts do not access client pages: redirect straight to admin dashboard
+    if (isAdmin && !isAdminPath) {
+      navigate('/admin', { replace: true });
+    }
+  }, [isAdmin, isAdminPath, navigate]);
 
   return (
     <div>
@@ -48,6 +59,7 @@ const App = () => {
           <Route path="/experience" element={<Experience />} />
           <Route path="/rooms/:id" element={<RoomDetails />} />
           <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/loader/:nextUrl" element={<Loader />} />
 
           {/* Partner / Hotel Owner Routes */}
@@ -55,8 +67,9 @@ const App = () => {
             <Route index element={<Dashboard />} />
             <Route path="schedule" element={<ScheduleCalendar />} />
             <Route path="manage-hotel" element={<ManageHotel />} />
-            <Route path="add-room" element={<AddRoom />} />
+            <Route path="add-room" element={<Navigate to="/owner-dashboard/list-room" replace />} />
             <Route path="list-room" element={<ListRoom />} />
+            <Route path="offers" element={<ManageOffers />} />
           </Route>
 
           {/* Admin Routes */}

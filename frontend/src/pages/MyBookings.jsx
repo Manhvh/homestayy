@@ -88,7 +88,6 @@ const MyBookings = () => {
           </div>
         ) : bookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-2xl border border-gray-200">
-            <div className="text-6xl mb-4">🏨</div>
             <h3 className="text-xl font-bold text-gray-700 mb-2">Bạn chưa có đơn đặt phòng nào</h3>
             <p className="text-gray-500 mb-6">Hãy khám phá các homestay tuyệt vời và lên kế hoạch cho kỳ nghỉ sắp tới.</p>
             <button 
@@ -122,7 +121,7 @@ const MyBookings = () => {
                               ? "bg-red-100 text-red-700" 
                               : "bg-amber-100 text-amber-700"
                         }`}>
-                          {booking.status === "confirmed" ? "✓ Đã xác nhận" : booking.status === "cancelled" ? "✕ Đã hủy" : "⏳ Đang chờ duyệt"}
+                          {booking.status === "confirmed" ? "Đã xác nhận" : booking.status === "cancelled" ? "Đã hủy" : "Đang chờ duyệt"}
                         </span>
                         <span className="text-xs text-gray-400">Mã: #{String(booking.id || booking._id).slice(-6)}</span>
                       </div>
@@ -140,7 +139,7 @@ const MyBookings = () => {
 
                     <div className="text-sm text-gray-600 mt-3">
                       <span>Khách: <strong>{booking.guests || 1} người</strong> | </span>
-                      <span>Tổng tiền: <strong className="text-gray-900 text-base">{currency} {booking.totalPrice}</strong></span>
+                      <span>Tổng tiền: <strong className="text-gray-900 text-base">{Number(booking.totalPrice).toLocaleString('vi-VN')} {currency}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -166,7 +165,7 @@ const MyBookings = () => {
                   <div className="text-left lg:text-right w-full">
                     <span className="text-[11px] text-gray-400 block uppercase font-semibold">Hình thức thanh toán</span>
                     <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-1 rounded-lg inline-block mt-1">
-                      💵 Thanh toán tại Homestay
+                      Thanh toán tại Homestay
                     </span>
                   </div>
 
@@ -180,7 +179,7 @@ const MyBookings = () => {
                         }}
                         className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition"
                       >
-                        Đánh giá / Xem lại
+                        Xem lại
                       </button>
                     )}
 

@@ -16,8 +16,8 @@ const NewsLetter = () => {
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
         }`}>
          <div className="flex flex-col justify-center items-center text-center">
-            <h1 className="text-4xl md:text-[40px] font-playfair text-white">{`Stay Inspired`}</h1>
-            <p className='text-sm md:text-base text-gray-300 mt-2 max-w-174'>Join our newsletter and be the first to discover new updates, exclusive offers, and inspiration.</p>
+            <h1 className="text-4xl md:text-[40px] font-playfair text-white">{`Đồng Hành Cùng Chúng Tôi`}</h1>
+            <p className='text-sm md:text-base text-gray-300 mt-2 max-w-174'>Đăng ký nhận bản tin để là người đầu tiên nhận các thông tin ưu đãi homestay đặc quyền và điểm đến mới nhất.</p>
           </div>
         </div>
 
@@ -28,8 +28,8 @@ const NewsLetter = () => {
             <div className="relative w-full">
               <input 
                 type="email" 
-                className="w-full bg-white/10 px-6 py-4 border border-white/20 rounded-lg outline-none text-white placeholder-gray-300 focus:border-white/40 focus:bg-white/15 transition-all duration-300" 
-                placeholder="Enter your email address" 
+                className="w-full bg-white/10 px-6 py-4 border border-white/20 rounded-xl outline-none text-white placeholder-gray-300 focus:border-white/40 focus:bg-white/15 transition-all duration-300 text-sm" 
+                placeholder="Nhập địa chỉ email của bạn..." 
               />
               <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -37,14 +37,14 @@ const NewsLetter = () => {
                 </svg>
               </div>
             </div>
-            <button className="group flex items-center justify-center gap-3 bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl whitespace-nowrap">
-              Subscribe
+            <button className="group flex items-center justify-center gap-3 bg-white text-gray-900 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl whitespace-nowrap cursor-pointer">
+              Đăng ký nhận tin
               <img src={assets.arrowIcon} alt="arrow-icon" className='w-4 h-4 group-hover:translate-x-1 transition-all duration-300' />
             </button>
           </div>
           
-          <p className="text-gray-400 mt-6 text-sm text-center leading-relaxed">
-            By subscribing, you agree to our <span className="text-white underline cursor-pointer hover:text-gray-300">Privacy Policy</span> and consent to receive updates from HomeStay.
+          <p className="text-gray-400 mt-6 text-xs text-center leading-relaxed">
+            Bằng việc đăng ký, bạn đồng ý với <span className="text-white underline cursor-pointer hover:text-gray-300">Chính sách bảo mật</span> và chấp thuận nhận thông tin cập nhật từ HomeStay.
           </p>
         </div>
       </div>

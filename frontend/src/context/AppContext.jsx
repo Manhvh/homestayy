@@ -3,30 +3,34 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import AuthModal from '../components/AuthModal.jsx';
+import ProfileModal from '../components/ProfileModal.jsx';
 
-axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
+axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-    const currency = import.meta.env.VITE_CURRENCY || '$';
+    const currency = import.meta.env.VITE_CURRENCY || 'VNĐ';
+    const formatCurrency = (val) => `${Number(val || 0).toLocaleString('vi-VN')} ${currency}`;
     const navigate = useNavigate();
 
     const [token, setToken] = useState(() => localStorage.getItem('token') || '');
-    const [user, setUser] = useState(() => {
+    const savedUser = (() => {
         try {
             const saved = localStorage.getItem('user');
             return saved ? JSON.parse(saved) : null;
         } catch {
             return null;
         }
-    });
+    })();
 
-    const [isOwner, setIsOwner] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [userRole, setUserRole] = useState('user');
+    const [user, setUser] = useState(savedUser);
+    const [isOwner, setIsOwner] = useState(() => savedUser?.role === 'hotelOwner');
+    const [isAdmin, setIsAdmin] = useState(() => savedUser?.role === 'admin');
+    const [userRole, setUserRole] = useState(() => savedUser?.role || 'user');
     const [showHotelRegistration, setShowHotelRegistration] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
     const [searchedCities, setSearchedCities] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [cities, setCities] = useState([]);
@@ -35,6 +39,10 @@ export const AppProvider = ({ children }) => {
     // Open Login / Register Modal
     const openLoginModal = () => setShowAuthModal(true);
     const closeLoginModal = () => setShowAuthModal(false);
+
+    // Open / Close Profile Modal
+    const openProfileModal = () => setShowProfileModal(true);
+    const closeProfileModal = () => setShowProfileModal(false);
 
     // Provide token for API calls
     const getToken = useCallback(async () => {
@@ -57,7 +65,12 @@ export const AppProvider = ({ children }) => {
                 localStorage.setItem('user', JSON.stringify(data.user));
 
                 toast.success(data.message || 'Đăng nhập thành công!');
-                return { success: true };
+
+                if (data.user.role === 'admin') {
+                    navigate('/admin');
+                }
+
+                return { success: true, role: data.user.role };
             } else {
                 toast.error(data.message || 'Đăng nhập thất bại.');
                 return { success: false, message: data.message };
@@ -70,9 +83,9 @@ export const AppProvider = ({ children }) => {
     };
 
     // Native Register
-    const register = async (username, email, password, role = 'user') => {
+    const register = async (username, email, password, role = 'user', phone = '') => {
         try {
-            const { data } = await axios.post('/api/auth/register', { username, email, password, role });
+            const { data } = await axios.post('/api/auth/register', { username, email, password, role, phone });
             if (data.success) {
                 setToken(data.token);
                 setUser(data.user);
@@ -122,7 +135,7 @@ export const AppProvider = ({ children }) => {
             }
         } catch (error) {
             if (error.response?.status !== 401) {
-                toast.error('Failed to load rooms: ' + error.message);
+                toast.error('Lỗi khi tải danh sách phòng: ' + error.message);
             }
         }
     };
@@ -167,6 +180,10 @@ export const AppProvider = ({ children }) => {
                 setIsAdmin(data.role === 'admin');
                 setSearchedCities(data.recentSearchedCities || []);
                 localStorage.setItem('user', JSON.stringify(data.user));
+
+                if (data.role === 'admin' && !window.location.pathname.startsWith('/admin')) {
+                    navigate('/admin', { replace: true });
+                }
             } else {
                 logout();
             }
@@ -181,27 +198,31 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-    // Test/Demo helper: become Admin
-    const becomeAdmin = async () => {
+    // Update current user profile
+    const updateUserProfile = async (formDataOrObject) => {
         try {
             const currentToken = await getToken();
-            const { data } = await axios.post('/api/user/make-me-admin', {}, {
-                headers: { Authorization: `Bearer ${currentToken}` }
-            });
-            if (data.success) {
-                setIsAdmin(true);
-                setUserRole('admin');
-                if (user) {
-                    const updated = { ...user, role: 'admin' };
-                    setUser(updated);
-                    localStorage.setItem('user', JSON.stringify(updated));
-                }
-                toast.success('Bạn đã được cấp quyền Quản trị viên (Admin)!');
-            } else {
-                toast.error(data.message);
+            const isFormData = formDataOrObject instanceof FormData;
+            const headers = {
+                Authorization: `Bearer ${currentToken}`,
+            };
+            if (isFormData) {
+                headers['Content-Type'] = 'multipart/form-data';
             }
-        } catch (err) {
-            toast.error(err.message);
+            const { data } = await axios.put('/api/user/profile', formDataOrObject, { headers });
+            if (data.success) {
+                setUser(data.user);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                toast.success(data.message || 'Cập nhật thông tin cá nhân thành công!');
+                return { success: true, user: data.user };
+            } else {
+                toast.error(data.message || 'Cập nhật thất bại.');
+                return { success: false, message: data.message };
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || error.message || 'Lỗi cập nhật thông tin.';
+            toast.error(msg);
+            return { success: false, message: msg };
         }
     };
 
@@ -213,6 +234,7 @@ export const AppProvider = ({ children }) => {
 
     const value = {
         currency,
+        formatCurrency,
         navigate,
         user,
         token,
@@ -224,6 +246,11 @@ export const AppProvider = ({ children }) => {
         closeLoginModal,
         showAuthModal,
         setShowAuthModal,
+        openProfileModal,
+        closeProfileModal,
+        showProfileModal,
+        setShowProfileModal,
+        updateUserProfile,
         isOwner,
         setIsOwner,
         isAdmin,
@@ -241,7 +268,6 @@ export const AppProvider = ({ children }) => {
         cities,
         amenities,
         fetchCategories,
-        becomeAdmin,
         toast,
     };
 
@@ -249,6 +275,7 @@ export const AppProvider = ({ children }) => {
         <AppContext.Provider value={value}>
             {children}
             <AuthModal isOpen={showAuthModal} onClose={closeLoginModal} />
+            <ProfileModal isOpen={showProfileModal} onClose={closeProfileModal} />
         </AppContext.Provider>
     );
 };

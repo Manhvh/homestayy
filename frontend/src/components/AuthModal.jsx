@@ -10,6 +10,7 @@ const AuthModal = ({ isOpen, onClose }) => {
     username: '',
     email: '',
     password: '',
+    phone: '',
     role: 'user', // 'user' or 'hotelOwner'
   });
 
@@ -36,11 +37,17 @@ const AuthModal = ({ isOpen, onClose }) => {
         }
       } else {
         if (!formData.username || !formData.email || !formData.password) {
-          toast.error("Vui lòng điền đầy đủ các trường.");
+          toast.error("Vui lòng điền đầy đủ các trường bắt buộc.");
           setLoading(false);
           return;
         }
-        const res = await register(formData.username, formData.email, formData.password, formData.role);
+        const res = await register(
+          formData.username,
+          formData.email,
+          formData.password,
+          formData.role,
+          formData.phone
+        );
         if (res.success) {
           onClose();
         }
@@ -85,7 +92,7 @@ const AuthModal = ({ isOpen, onClose }) => {
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -120,7 +127,7 @@ const AuthModal = ({ isOpen, onClose }) => {
         <div className="p-6">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-800">
-              {isLoginMode ? 'Chào mừng bạn trở lại! 👋' : 'Tạo tài khoản mới ✨'}
+              {isLoginMode ? 'Chào mừng bạn trở lại!' : 'Tạo tài khoản mới'}
             </h2>
             <p className="text-xs text-gray-500 mt-1">
               {isLoginMode
@@ -173,6 +180,20 @@ const AuthModal = ({ isOpen, onClose }) => {
 
             {!isLoginMode && (
               <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Số điện thoại liên hệ</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="Ví dụ: 0912345678"
+                  className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                />
+              </div>
+            )}
+
+            {!isLoginMode && (
+              <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Bạn tham gia với tư cách</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -184,7 +205,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    🎒 Khách du lịch
+                    Khách du lịch
                   </button>
                   <button
                     type="button"
@@ -195,7 +216,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    🏡 Chủ Homestay
+                    Chủ Homestay
                   </button>
                 </div>
               </div>
@@ -213,7 +234,7 @@ const AuthModal = ({ isOpen, onClose }) => {
           {/* Quick Demo Buttons for Evaluators */}
           <div className="mt-6 pt-5 border-t border-gray-100">
             <p className="text-xs text-center text-gray-400 font-medium mb-3">
-              ⚡ Đăng nhập nhanh cho Hội đồng chấm đồ án:
+              Đăng nhập nhanh cho Hội đồng chấm đồ án:
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button

@@ -7,8 +7,8 @@ const Sidebar = () => {
     { name: "Tổng quan", path: "/owner-dashboard", icon: assets.dashboardIcon },
     { name: "Lịch đặt phòng", path: "/owner-dashboard/schedule", icon: assets.calenderIcon },
     { name: "Quản lý Homestay", path: "/owner-dashboard/manage-hotel", icon: assets.homeIcon },
-    { name: "Thêm phòng & Giá", path: "/owner-dashboard/add-room", icon: assets.addIcon },
     { name: "Danh sách phòng", path: "/owner-dashboard/list-room", icon: assets.listIcon },
+    { name: "Quản lý Ưu đãi", path: "/owner-dashboard/offers", icon: assets.badgeIcon },
   ];
 
   return (

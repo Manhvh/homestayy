@@ -24,16 +24,16 @@ const FeaturedDestination = () => {
         }`}>
           <div className="inline-block mb-6">
             <span className="bg-gray-900 text-white px-4 py-2 rounded-full text-sm font-semibold">
-              ⭐ Featured Collection
+              ⭐ Bộ Sưu Tập Nổi Bật
             </span>
           </div>
           <h2 className="font-playfair text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-            Featured Destinations
+            Điểm Đến Nổi Bật
           </h2>
           <div className="w-24 h-0.5 bg-gray-300 mx-auto mb-6"></div>
           <p className="max-w-3xl mx-auto text-lg text-gray-600 leading-relaxed">
-            Discover our handpicked selection of exceptional properties around the world, offering 
-            <span className="text-gray-900 font-semibold"> unparalleled luxury and unforgettable experiences</span>.
+            Khám phá danh sách các homestay được tuyển chọn kỹ lưỡng khắp mọi miền, mang đến 
+            <span className="text-gray-900 font-semibold"> không gian nghỉ dưỡng tuyệt vời và dịch vụ tận tâm</span>.
           </p>
         </div>
         
@@ -41,7 +41,7 @@ const FeaturedDestination = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl place-items-center">
             {rooms.slice(0, 4).map((room, index) => (
               <div 
-                key={room._id} 
+                key={room.id || room._id} 
                 className={`transform transition-all duration-700 hover:scale-105 w-full ${
                   isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
                 }`}
@@ -61,9 +61,9 @@ const FeaturedDestination = () => {
         }`}>
           <button 
             onClick={() => { navigate('/rooms'); scrollTo(0, 0) }} 
-            className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-slate-600 to-slate-800 text-white px-10 py-4 rounded-2xl font-semibold hover:from-slate-700 hover:to-slate-900 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-slate-600 to-slate-800 text-white px-10 py-4 rounded-2xl font-semibold hover:from-slate-700 hover:to-slate-900 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 cursor-pointer"
           >
-            <span>🗺️ Explore All Destinations</span>
+            <span>Xem Tất Cả</span>
             <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>

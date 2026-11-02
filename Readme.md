@@ -192,7 +192,14 @@ docker compose up -d
    cd backend
    npm install
    ```
-2. Kiểm tra file cấu hình `.env` (đã được thiết lập sẵn khớp với Docker):
+2. Nạp bộ dữ liệu mẫu hoàn chỉnh (Seeder) cho đồ án:
+   ```bash
+   npm run seed
+   # Hoặc: npm run seed-production
+   ```
+   * *Lệnh này sẽ tự động khởi tạo dữ liệu phong phú gồm: 13 người dùng (đầy đủ 3 vai trò), 25 danh mục tiện ích & tỉnh thành, 6 homestay/resort, 15 phòng kèm bảng giá theo mùa, 10 đơn đặt phòng (đang ở, sắp tới, chờ duyệt, hoàn tất) và 9 đánh giá thực tế.*
+
+3. Kiểm tra file cấu hình `.env` (đã được thiết lập sẵn khớp với Docker):
    ```env
    PORT=4000
    CURRENCY=$
@@ -207,17 +214,17 @@ docker compose up -d
    # JWT Secret Key
    JWT_SECRET=homestay_graduation_secret_key_2026
    
-   # Cấu hình Nodemailer gửi email (Tùy chọn)
+   # Cấu hình Nodemailer gửi email
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
    SMTP_USER=your_email@gmail.com
    SMTP_PASS=your_email_app_password
    SENDER_EMAIL=your_email@gmail.com
    ```
-3. Khởi chạy máy chủ Backend:
+4. Khởi chạy máy chủ Backend:
    ```bash
    npm run dev
-   # Hoặc: node server.js
+   # Hoặc: npm start / node server.js
    ```
    * Backend sẽ lắng nghe tại: `http://localhost:4000`
 

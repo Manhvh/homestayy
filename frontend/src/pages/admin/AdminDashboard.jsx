@@ -33,11 +33,11 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div className="max-w-6xl space-y-8">
+        <div className="w-full space-y-8">
             <Title
                 align="left"
                 font="outfit"
-                title="Báo Cáo Thống Kê Tổng Quan Hệ Thống"
+                title="Tổng Quan Hệ Thống"
                 subTitle="Theo dõi tăng trưởng người dùng, tình trạng kiểm duyệt tin homestay, doanh số giao dịch và mức độ hài lòng của khách hàng."
             />
 
@@ -56,13 +56,13 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                    <p className="text-xs font-semibold uppercase text-gray-400">Tổng doanh thu toàn sàn</p>
-                    <p className="text-3xl font-extrabold text-green-700 mt-2">{currency} {stats?.totalRevenue || 0}</p>
+                    <p className="text-xs font-semibold uppercase text-gray-400">Tổng doanh thu</p>
+                    <p className="text-3xl font-extrabold text-green-700 mt-2">{Number(stats?.totalRevenue || 0).toLocaleString('vi-VN')} {currency}</p>
                     <p className="text-xs text-gray-500 mt-1">{stats?.totalBookings || 0} lượt đặt phòng</p>
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-                    <p className="text-xs font-semibold uppercase text-gray-400">Đánh giá & Hài lòng</p>
+                    <p className="text-xs font-semibold uppercase text-gray-400">Đánh giá</p>
                     <div className="flex items-baseline gap-2 mt-2">
                         <span className="text-3xl font-extrabold text-amber-500">★ {stats?.averageRating || 0}</span>
                         <span className="text-xs text-gray-400">/ 5 sao</span>
@@ -75,7 +75,7 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Recent Bookings */}
                 <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                    <h3 className="font-bold text-gray-900 text-base mb-4">🛒 Đơn đặt phòng mới nhất</h3>
+                    <h3 className="font-bold text-gray-900 text-base mb-4">Đơn đặt phòng mới nhất</h3>
                     {stats?.recentBookings && stats.recentBookings.length > 0 ? (
                         <div className="space-y-3">
                             {stats.recentBookings.map((b) => (
@@ -85,11 +85,11 @@ const AdminDashboard = () => {
                                         <p className="text-gray-400">{new Date(b.createdAt).toLocaleString()}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-bold text-gray-900">{currency}{b.totalPrice}</p>
+                                        <p className="font-bold text-gray-900">{Number(b.totalPrice).toLocaleString('vi-VN')} {currency}</p>
                                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                            b.status === "confirmed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                                            b.status === "confirmed" ? "bg-green-100 text-green-700" : b.status === "cancelled" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
                                         }`}>
-                                            {b.status}
+                                            {b.status === "confirmed" ? "Đã duyệt" : b.status === "cancelled" ? "Đã hủy" : "Chờ duyệt"}
                                         </span>
                                     </div>
                                 </div>

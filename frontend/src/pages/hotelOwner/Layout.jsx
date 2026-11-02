@@ -6,21 +6,22 @@ import { useAppContext } from '../../context/AppContext'
 
 const Layout = () => {
 
-  const { isOwner, navigate } = useAppContext();
+  const { isOwner, isAdmin, navigate, toast } = useAppContext();
 
   useEffect(() => {
-    //the user is not an Hotel Owner they will be naviagted to Home page for Security!!
-    if (!isOwner) {
-      navigate('/')
+    // Only Hotel Owner or Admin can access the Owner Dashboard
+    if (!isOwner && !isAdmin) {
+      toast.error('Bạn không có quyền truy cập Kênh Chủ nhà.');
+      navigate('/');
     }
-  }, [isOwner]);
+  }, [isOwner, isAdmin, navigate, toast]);
 
   return (
-    <div className='flex flex-col h-screen'>
+    <div className='flex flex-col h-screen bg-gray-50/40'>
       <Navbar />
-      <div className='flex h-full'>
+      <div className='flex flex-1 overflow-hidden'>
         <Sidebar />
-        <div className='flex-1 p-4 pt-10 md:px-10 h-full'>
+        <div className='flex-1 p-4 pt-6 md:p-8 overflow-y-auto'>
           <Outlet />
         </div>
       </div>

@@ -66,7 +66,7 @@ const Dashboard = () => {
       <Title
         align="left"
         font="outfit"
-        title="Bảng Điều Khiển Chủ Nhà"
+        title="Bảng Điều Khiển"
         subTitle="Quản lý toàn bộ danh mục phòng, duyệt đơn đặt phòng từ khách hàng và theo dõi doanh thu theo thời gian thực."
       />
 
@@ -84,7 +84,7 @@ const Dashboard = () => {
           <img src={assets.totalRevenueIcon} alt="total-revenue" className="h-10 w-10 mr-4" />
           <div>
             <p className="text-gray-500 text-xs uppercase font-semibold">Tổng doanh thu</p>
-            <p className="text-2xl font-bold text-gray-900">{currency} {dashboardData.totalRevenue}</p>
+            <p className="text-2xl font-bold text-gray-900">{Number(dashboardData.totalRevenue).toLocaleString('vi-VN')} {currency}</p>
           </div>
         </div>
 
@@ -99,7 +99,7 @@ const Dashboard = () => {
 
       {/* Recent Bookings Table */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-800">📋 Danh sách đơn đặt phòng gần đây</h2>
+        <h2 className="text-lg font-bold text-gray-800">Danh sách đơn đặt phòng gần đây</h2>
         <button onClick={fetchDashboardData} className="text-xs text-blue-600 hover:underline">
           Làm mới
         </button>
@@ -149,7 +149,7 @@ const Dashboard = () => {
                     </td>
 
                     <td className="py-3 px-4 text-center font-bold text-gray-900">
-                      {currency} {item.totalPrice}
+                      {Number(item.totalPrice).toLocaleString('vi-VN')} {currency}
                     </td>
 
                     <td className="py-3 px-4 text-center">
@@ -160,7 +160,7 @@ const Dashboard = () => {
                             ? "bg-red-100 text-red-700" 
                             : "bg-amber-100 text-amber-700"
                       }`}>
-                        {item.status === "confirmed" ? "✓ Đã duyệt" : item.status === "cancelled" ? "✕ Đã hủy" : "⏳ Chờ duyệt"}
+                        {item.status === "confirmed" ? "Đã duyệt" : item.status === "cancelled" ? "Đã hủy" : "Đang chờ duyệt"}
                       </span>
                     </td>
 

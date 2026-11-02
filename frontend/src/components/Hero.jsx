@@ -104,24 +104,24 @@ const Hero = () => {
       }`}>
         <div className="inline-block">
           <p className="bg-gradient-to-r from-blue-500/80 to-purple-500/80 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-fade-in">
-            ✨ Seamless Stays, Elevated Experiences
+            Kỳ nghỉ hoàn hảo, Trải nghiệm thăng hoa
           </p>
         </div>
         
         <h1 className="font-playfair text-3xl md:text-6xl lg:text-7xl font-bold md:font-extrabold max-w-4xl mt-6 leading-tight">
           <span className="bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent animate-slide-up">
-            Explore Your Perfect
+            Khám Phá Điểm Đến
           </span>
           <br />
           <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-slide-up-delay">
-            Gateway Destination
+            Nghỉ Dưỡng Lý Tưởng
           </span>
         </h1>
         
         <p className="max-w-2xl mt-6 text-lg md:text-xl text-gray-200 leading-relaxed animate-fade-in-delay">
-          From Luxury Resorts to Budget Gems and Wild Escapes, 
+          Từ khu nghỉ dưỡng sang trọng đến homestay ấm cúng và thiên nhiên kỳ vĩ,
           <br className="hidden md:block" />
-          <span className="text-blue-300 font-medium">Find your perfect stay, your way</span>
+          <span className="text-blue-300 font-medium">Tìm kiếm phòng nghỉ hoàn hảo theo cách riêng của bạn</span>
         </p>
 
         {/* Modern Search Form */}
@@ -131,7 +131,7 @@ const Hero = () => {
               <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                 <img src={assets.locationIcon} alt="location" className="h-3 w-3" />
               </div>
-              <label htmlFor="destinationInput" className="text-sm font-semibold text-gray-600">Destination</label>
+              <label htmlFor="destinationInput" className="text-sm font-semibold text-gray-600">Điểm đến</label>
             </div>
             <input
               onChange={e => setDestination(e.target.value)}
@@ -140,7 +140,7 @@ const Hero = () => {
               id="destinationInput"
               type="text"
               className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 bg-white/80"
-              placeholder="Where are you going?"
+              placeholder="Bạn muốn đi đâu?"
               required
             />
             <datalist id="destinations">
@@ -155,7 +155,7 @@ const Hero = () => {
               <div className="w-5 h-5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
                 <img src={assets.calenderIcon} alt="calendar" className="h-3 w-3" />
               </div>
-              <label htmlFor="checkIn" className="text-sm font-semibold text-gray-600">Check in</label>
+              <label htmlFor="checkIn" className="text-sm font-semibold text-gray-600">Nhận phòng</label>
             </div>
             <input
               id="checkIn"
@@ -163,7 +163,7 @@ const Hero = () => {
               value={checkIn}
               min={new Date().toISOString().split("T")[0]}
               onChange={(e) => setCheckIn(e.target.value)}
-              className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 bg-white/80"
+              className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 bg-white/80 cursor-pointer"
             />
           </div>
 
@@ -172,7 +172,7 @@ const Hero = () => {
               <div className="w-5 h-5 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
                 <img src={assets.calenderIcon} alt="calendar" className="h-3 w-3" />
               </div>
-              <label htmlFor="checkOut" className="text-sm font-semibold text-gray-600">Check out</label>
+              <label htmlFor="checkOut" className="text-sm font-semibold text-gray-600">Trả phòng</label>
             </div>
             <input
               id="checkOut"
@@ -180,7 +180,7 @@ const Hero = () => {
               value={checkOut}
               min={checkIn || new Date().toISOString().split("T")[0]}
               onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-300 bg-white/80"
+              className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-300 bg-white/80 cursor-pointer"
             />
           </div>
 
@@ -189,7 +189,7 @@ const Hero = () => {
               <div className="w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                 <img src={assets.guestsIcon} alt="guests" className="h-3 w-3" />
               </div>
-              <label htmlFor="guests" className="text-sm font-semibold text-gray-600">Guests</label>
+              <label htmlFor="guests" className="text-sm font-semibold text-gray-600">Số khách</label>
             </div>
             <input
               min={1}
@@ -203,9 +203,9 @@ const Hero = () => {
             />
           </div>
 
-          <button className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 py-4 px-8 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+          <button className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 py-4 px-8 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer">
             <img src={assets.searchIcon} alt="search-icon" className="h-5 w-5" />
-            <span>Search Hotels</span>
+            <span>Tìm kiếm phòng</span>
           </button>
         </form>
       </div>
