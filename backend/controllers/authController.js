@@ -5,7 +5,7 @@ import { hashPassword, verifyPassword, generateToken } from '../utils/authUtils.
 // POST /api/auth/register
 export const register = async (req, res) => {
     try {
-        const { username, email, password, role } = req.body;
+        const { username, email, password, phone, role } = req.body;
 
         if (!email || !password || !username) {
             return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ tên, email và mật khẩu." });
@@ -22,13 +22,16 @@ export const register = async (req, res) => {
 
         const userId = `user_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
         const hashedPassword = hashPassword(password);
-        const userRole = role === "hotelOwner" ? "hotelOwner" : (role === "admin" ? "admin" : "user");
+        // Public registration can only register as 'user' or 'hotelOwner'.
+        // Admin accounts can only be activated from within the admin dashboard.
+        const userRole = role === "hotelOwner" ? "hotelOwner" : "user";
 
         const newUser = await User.create({
             id: userId,
             username: username.trim(),
             email: email.toLowerCase().trim(),
             password: hashedPassword,
+            phone: phone ? phone.trim() : "",
             image: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username.trim())}`,
             role: userRole,
             isBlocked: false,

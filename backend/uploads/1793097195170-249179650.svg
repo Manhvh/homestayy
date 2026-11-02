@@ -1,0 +1,288 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1602.7140000000002 910" width="1602.7140000000002" height="910" style="--bg:#18181B;--fg:#F4F4F5;--line:#71717A;--muted:#A1A1AA;--surface:#27272A;--border:#3F3F46;background:var(--bg)">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap');
+  text { font-family: 'Inter', system-ui, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace; }
+  svg {
+    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
+    --_text:          var(--fg);
+    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
+    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
+    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
+    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
+    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
+    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
+    --_group-fill:    var(--bg);
+    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
+    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
+    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
+  }
+</style>
+<defs>
+</defs>
+<polyline class="er-relationship" data-entity1="users" data-entity2="hotels" data-cardinality1="one" data-cardinality2="zero-one" data-identifying="true" data-label="owns (1 - 1)" points="239.6,585.3 473.206,585.3" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="er-relationship" data-entity1="users" data-entity2="bookings" data-cardinality1="one" data-cardinality2="zero-many" data-identifying="true" data-label="places (1 - N)" points="239.6,643.3 249.6,643.3 249.6,816.5999999999999 1286.5140000000001,816.5999999999999 1286.5140000000001,790 1356.5140000000001,790" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="er-relationship" data-entity1="users" data-entity2="reviews" data-cardinality1="one" data-cardinality2="zero-many" data-identifying="true" data-label="writes (1 - N)" points="239.6,527.3 249.6,527.3 249.6,306 1356.5140000000001,306" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="er-relationship" data-entity1="hotels" data-entity2="rooms" data-cardinality1="one" data-cardinality2="zero-many" data-identifying="true" data-label="has (1 - N)" points="666.206,585.3 911.692,585.3" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="er-relationship" data-entity1="hotels" data-entity2="bookings" data-cardinality1="one" data-cardinality2="zero-many" data-identifying="true" data-label="receives (1 - N)" points="666.206,654.3 676.206,654.3 676.206,805.5999999999999 1276.5140000000001,805.5999999999999 1276.5140000000001,710 1356.5140000000001,710" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="er-relationship" data-entity1="hotels" data-entity2="reviews" data-cardinality1="one" data-cardinality2="zero-many" data-identifying="true" data-label="has (1 - N)" points="666.206,516.3 676.206,516.3 676.206,364 1356.5140000000001,364" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="er-relationship" data-entity1="rooms" data-entity2="bookings" data-cardinality1="one" data-cardinality2="zero-many" data-identifying="true" data-label="booked_in (1 - N)" points="1084.892,627.6333333333333 1094.892,627.6333333333333 1094.892,630 1356.5140000000001,630" fill="none" stroke="var(--_line)" stroke-width="1" />
+<polyline class="er-relationship" data-entity1="rooms" data-entity2="reviews" data-cardinality1="one" data-cardinality2="zero-many" data-identifying="true" data-label="reviewed_in (1 - N)" points="1084.892,542.9666666666667 1276.5140000000001,542.9666666666667 1276.5140000000001,422 1356.5140000000001,422" fill="none" stroke="var(--_line)" stroke-width="1" />
+<g class="entity" data-id="users" data-label="users">
+  <rect x="40" y="469.3" width="199.6" height="232" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="40" y="469.3" width="199.6" height="34" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="139.8" y="486.3" text-anchor="middle" font-size="13" font-weight="700" fill="var(--_text)" dy="4.55">users</text>
+  <line x1="40" y1="503.3" x2="239.6" y2="503.3" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <rect x="46" y="507.29999999999995" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="57.155" y="514.3" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">PK</text>
+  <text x="76.31" y="514.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="231.6" y="514.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">id</tspan></text>
+  <text x="48" y="536.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="231.6" y="536.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">username</tspan></text>
+  <text x="48" y="558.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="231.6" y="558.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">email</tspan></text>
+  <text x="48" y="580.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">text</tspan></text>
+  <text x="231.6" y="580.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">image</tspan></text>
+  <g><title>user, hotelOwner, admin</title>
+  <text x="48" y="602.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">enum</tspan></text>
+  <text x="231.6" y="602.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">role</tspan></text>
+  </g>
+  <text x="48" y="624.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">boolean</tspan></text>
+  <text x="231.6" y="624.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">isBlocked</tspan></text>
+  <text x="48" y="646.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">json</tspan></text>
+  <text x="231.6" y="646.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">recentSearchedCities</tspan></text>
+  <text x="48" y="668.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="231.6" y="668.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">createdAt</tspan></text>
+  <text x="48" y="690.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="231.6" y="690.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">updatedAt</tspan></text>
+</g>
+<g class="entity" data-id="hotels" data-label="hotels">
+  <rect x="473.206" y="447.3" width="193" height="276" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="473.206" y="447.3" width="193" height="34" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="569.706" y="464.3" text-anchor="middle" font-size="13" font-weight="700" fill="var(--_text)" dy="4.55">hotels</text>
+  <line x1="473.206" y1="481.3" x2="666.206" y2="481.3" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <rect x="479.206" y="485.3" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="490.361" y="492.3" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">PK</text>
+  <text x="509.516" y="492.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="658.206" y="492.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">id</tspan></text>
+  <text x="481.206" y="514.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="658.206" y="514.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">name</tspan></text>
+  <text x="481.206" y="536.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">text</tspan></text>
+  <text x="658.206" y="536.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">address</tspan></text>
+  <text x="481.206" y="558.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(100)</tspan></text>
+  <text x="658.206" y="558.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">contact</tspan></text>
+  <text x="481.206" y="580.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(100)</tspan></text>
+  <text x="658.206" y="580.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">city</tspan></text>
+  <text x="481.206" y="602.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">text</tspan></text>
+  <text x="658.206" y="602.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">description</tspan></text>
+  <text x="481.206" y="624.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">text</tspan></text>
+  <text x="658.206" y="624.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">image</tspan></text>
+  <g><title>pending, approved, rejected</title>
+  <text x="481.206" y="646.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">enum</tspan></text>
+  <text x="658.206" y="646.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">status</tspan></text>
+  </g>
+  <rect x="479.206" y="661.3" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="490.361" y="668.3" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">FK</text>
+  <text x="509.516" y="668.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="658.206" y="668.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">ownerId</tspan></text>
+  <text x="481.206" y="690.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="658.206" y="690.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">createdAt</tspan></text>
+  <text x="481.206" y="712.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="658.206" y="712.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">updatedAt</tspan></text>
+</g>
+<g class="entity" data-id="bookings" data-label="bookings">
+  <rect x="1356.5140000000001" y="550" width="206.2" height="320" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="1356.5140000000001" y="550" width="206.2" height="34" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="1459.614" y="567" text-anchor="middle" font-size="13" font-weight="700" fill="var(--_text)" dy="4.55">bookings</text>
+  <line x1="1356.5140000000001" y1="584" x2="1562.7140000000002" y2="584" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <rect x="1362.5140000000001" y="588" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="1373.669" y="595" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">PK</text>
+  <text x="1392.824" y="595" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1554.7140000000002" y="595" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">id</tspan></text>
+  <rect x="1362.5140000000001" y="610" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="1373.669" y="617" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">FK</text>
+  <text x="1392.824" y="617" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="1554.7140000000002" y="617" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">userId</tspan></text>
+  <rect x="1362.5140000000001" y="632" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="1373.669" y="639" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">FK</text>
+  <text x="1392.824" y="639" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1554.7140000000002" y="639" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">roomId</tspan></text>
+  <rect x="1362.5140000000001" y="654" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="1373.669" y="661" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">FK</text>
+  <text x="1392.824" y="661" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1554.7140000000002" y="661" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">hotelId</tspan></text>
+  <text x="1364.5140000000001" y="683" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="1554.7140000000002" y="683" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">checkInDate</tspan></text>
+  <text x="1364.5140000000001" y="705" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="1554.7140000000002" y="705" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">checkOutDate</tspan></text>
+  <text x="1364.5140000000001" y="727" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">double</tspan></text>
+  <text x="1554.7140000000002" y="727" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">totalPrice</tspan></text>
+  <text x="1364.5140000000001" y="749" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1554.7140000000002" y="749" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">guests</tspan></text>
+  <g><title>pending, confirmed, cancelled</title>
+  <text x="1364.5140000000001" y="771" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">enum</tspan></text>
+  <text x="1554.7140000000002" y="771" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">status</tspan></text>
+  </g>
+  <text x="1364.5140000000001" y="793" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(100)</tspan></text>
+  <text x="1554.7140000000002" y="793" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">paymentMethod</tspan></text>
+  <text x="1364.5140000000001" y="815" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">boolean</tspan></text>
+  <text x="1554.7140000000002" y="815" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">isPaid</tspan></text>
+  <text x="1364.5140000000001" y="837" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="1554.7140000000002" y="837" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">createdAt</tspan></text>
+  <text x="1364.5140000000001" y="859" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="1554.7140000000002" y="859" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">updatedAt</tspan></text>
+</g>
+<g class="entity" data-id="reviews" data-label="reviews">
+  <rect x="1356.5140000000001" y="248" width="186.4" height="232" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="1356.5140000000001" y="248" width="186.4" height="34" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="1449.7140000000002" y="265" text-anchor="middle" font-size="13" font-weight="700" fill="var(--_text)" dy="4.55">reviews</text>
+  <line x1="1356.5140000000001" y1="282" x2="1542.9140000000002" y2="282" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <rect x="1362.5140000000001" y="286" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="1373.669" y="293" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">PK</text>
+  <text x="1392.824" y="293" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1534.9140000000002" y="293" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">id</tspan></text>
+  <rect x="1362.5140000000001" y="308" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="1373.669" y="315" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">FK</text>
+  <text x="1392.824" y="315" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="1534.9140000000002" y="315" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">userId</tspan></text>
+  <rect x="1362.5140000000001" y="330" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="1373.669" y="337" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">FK</text>
+  <text x="1392.824" y="337" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1534.9140000000002" y="337" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">hotelId</tspan></text>
+  <rect x="1362.5140000000001" y="352" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="1373.669" y="359" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">FK</text>
+  <text x="1392.824" y="359" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1534.9140000000002" y="359" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">roomId</tspan></text>
+  <text x="1364.5140000000001" y="381" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1534.9140000000002" y="381" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">bookingId</tspan></text>
+  <g><title>1 - 5</title>
+  <text x="1364.5140000000001" y="403" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1534.9140000000002" y="403" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">rating</tspan></text>
+  </g>
+  <text x="1364.5140000000001" y="425" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">text</tspan></text>
+  <text x="1534.9140000000002" y="425" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">comment</tspan></text>
+  <text x="1364.5140000000001" y="447" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="1534.9140000000002" y="447" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">createdAt</tspan></text>
+  <text x="1364.5140000000001" y="469" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="1534.9140000000002" y="469" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">updatedAt</tspan></text>
+</g>
+<g class="entity" data-id="rooms" data-label="rooms">
+  <rect x="911.692" y="458.3" width="173.2" height="254" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="911.692" y="458.3" width="173.2" height="34" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="998.292" y="475.3" text-anchor="middle" font-size="13" font-weight="700" fill="var(--_text)" dy="4.55">rooms</text>
+  <line x1="911.692" y1="492.3" x2="1084.892" y2="492.3" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <rect x="917.692" y="496.3" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="928.847" y="503.3" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">PK</text>
+  <text x="948.002" y="503.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1076.892" y="503.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">id</tspan></text>
+  <rect x="917.692" y="518.3" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="928.847" y="525.3" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">FK</text>
+  <text x="948.002" y="525.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="1076.892" y="525.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">hotelId</tspan></text>
+  <text x="919.692" y="547.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(100)</tspan></text>
+  <text x="1076.892" y="547.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">roomType</tspan></text>
+  <text x="919.692" y="569.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">double</tspan></text>
+  <text x="1076.892" y="569.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">pricePerNight</tspan></text>
+  <text x="919.692" y="591.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">json</tspan></text>
+  <text x="1076.892" y="591.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">seasonalPricing</tspan></text>
+  <text x="919.692" y="613.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">json</tspan></text>
+  <text x="1076.892" y="613.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">amenities</tspan></text>
+  <text x="919.692" y="635.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">json</tspan></text>
+  <text x="1076.892" y="635.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">images</tspan></text>
+  <text x="919.692" y="657.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">boolean</tspan></text>
+  <text x="1076.892" y="657.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">isAvailable</tspan></text>
+  <text x="919.692" y="679.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="1076.892" y="679.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">createdAt</tspan></text>
+  <text x="919.692" y="701.3" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="1076.892" y="701.3" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">updatedAt</tspan></text>
+</g>
+<g class="entity" data-id="categories" data-label="categories">
+  <rect x="40" y="40" width="153.39999999999998" height="188" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <rect x="40" y="40" width="153.39999999999998" height="34" rx="0" ry="0" fill="var(--_group-hdr)" stroke="var(--_node-stroke)" stroke-width="1" />
+  <text x="116.69999999999999" y="57" text-anchor="middle" font-size="13" font-weight="700" fill="var(--_text)" dy="4.55">categories</text>
+  <line x1="40" y1="74" x2="193.39999999999998" y2="74" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <rect x="46" y="78" width="22.31" height="14" rx="2" ry="2" fill="var(--_key-badge)" />
+  <text x="57.155" y="85" text-anchor="middle" dy="0.35em" font-size="9" font-weight="600" fill="var(--_text-sec)">PK</text>
+  <text x="76.31" y="85" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">int</tspan></text>
+  <text x="185.39999999999998" y="85" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">id</tspan></text>
+  <text x="48" y="107" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="185.39999999999998" y="107" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">name</tspan></text>
+  <g><title>amenity, city</title>
+  <text x="48" y="129" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">enum</tspan></text>
+  <text x="185.39999999999998" y="129" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">type</tspan></text>
+  </g>
+  <text x="48" y="151" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">varchar(255)</tspan></text>
+  <text x="185.39999999999998" y="151" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">icon</tspan></text>
+  <text x="48" y="173" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">text</tspan></text>
+  <text x="185.39999999999998" y="173" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">description</tspan></text>
+  <text x="48" y="195" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="185.39999999999998" y="195" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">createdAt</tspan></text>
+  <text x="48" y="217" class="mono" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-muted)">datetime</tspan></text>
+  <text x="185.39999999999998" y="217" class="mono" text-anchor="end" dy="0.35em" font-size="11" font-weight="400"><tspan fill="var(--_text-sec)">updatedAt</tspan></text>
+</g>
+<line x1="243.6" y1="579.3" x2="243.6" y2="591.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="247.6" y1="579.3" x2="247.6" y2="591.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="469.206" y1="591.3" x2="469.206" y2="579.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="465.206" y1="591.3" x2="465.206" y2="579.3" stroke="var(--_line)" stroke-width="1.25" />
+<circle cx="461.206" cy="585.3" r="4" fill="var(--bg)" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="243.6" y1="637.3" x2="243.6" y2="649.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="247.6" y1="637.3" x2="247.6" y2="649.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="797" x2="1340.5140000000001" y2="790" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="790" x2="1340.5140000000001" y2="790" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="783" x2="1340.5140000000001" y2="790" stroke="var(--_line)" stroke-width="1.25" />
+<circle cx="1336.5140000000001" cy="790" r="4" fill="var(--bg)" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="243.6" y1="521.3" x2="243.6" y2="533.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="247.6" y1="521.3" x2="247.6" y2="533.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="313" x2="1340.5140000000001" y2="306" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="306" x2="1340.5140000000001" y2="306" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="299" x2="1340.5140000000001" y2="306" stroke="var(--_line)" stroke-width="1.25" />
+<circle cx="1336.5140000000001" cy="306" r="4" fill="var(--bg)" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="670.206" y1="579.3" x2="670.206" y2="591.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="674.206" y1="579.3" x2="674.206" y2="591.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="907.692" y1="592.3" x2="895.692" y2="585.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="907.692" y1="585.3" x2="895.692" y2="585.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="907.692" y1="578.3" x2="895.692" y2="585.3" stroke="var(--_line)" stroke-width="1.25" />
+<circle cx="891.692" cy="585.3" r="4" fill="var(--bg)" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="670.206" y1="648.3" x2="670.206" y2="660.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="674.206" y1="648.3" x2="674.206" y2="660.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="717" x2="1340.5140000000001" y2="710" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="710" x2="1340.5140000000001" y2="710" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="703" x2="1340.5140000000001" y2="710" stroke="var(--_line)" stroke-width="1.25" />
+<circle cx="1336.5140000000001" cy="710" r="4" fill="var(--bg)" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="670.206" y1="510.29999999999995" x2="670.206" y2="522.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="674.206" y1="510.29999999999995" x2="674.206" y2="522.3" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="371" x2="1340.5140000000001" y2="364" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="364" x2="1340.5140000000001" y2="364" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="357" x2="1340.5140000000001" y2="364" stroke="var(--_line)" stroke-width="1.25" />
+<circle cx="1336.5140000000001" cy="364" r="4" fill="var(--bg)" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1088.892" y1="621.6333333333333" x2="1088.892" y2="633.6333333333333" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1092.892" y1="621.6333333333333" x2="1092.892" y2="633.6333333333333" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="637" x2="1340.5140000000001" y2="630" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="630" x2="1340.5140000000001" y2="630" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="623" x2="1340.5140000000001" y2="630" stroke="var(--_line)" stroke-width="1.25" />
+<circle cx="1336.5140000000001" cy="630" r="4" fill="var(--bg)" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1088.892" y1="536.9666666666667" x2="1088.892" y2="548.9666666666667" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1092.892" y1="536.9666666666667" x2="1092.892" y2="548.9666666666667" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="429" x2="1340.5140000000001" y2="422" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="422" x2="1340.5140000000001" y2="422" stroke="var(--_line)" stroke-width="1.25" />
+<line x1="1352.5140000000001" y1="415" x2="1340.5140000000001" y2="422" stroke="var(--_line)" stroke-width="1.25" />
+<circle cx="1336.5140000000001" cy="422" r="4" fill="var(--bg)" stroke="var(--_line)" stroke-width="1.25" />
+<rect x="329.6" y="575.15" width="53.606" height="20.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="0.5" />
+<text x="356.403" y="585.3" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">owns (1 - 1)</text>
+<rect x="691.964" y="806.4499999999999" width="65.486" height="20.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="0.5" />
+<text x="724.7070000000001" y="816.5999999999999" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">places (1 - N)</text>
+<rect x="656.4460000000001" y="295.85" width="61.92199999999999" height="20.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="0.5" />
+<text x="687.4070000000002" y="306" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">writes (1 - N)</text>
+<rect x="763.3340000000001" y="575.15" width="51.230000000000004" height="20.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="0.5" />
+<text x="788.9490000000001" y="585.3" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">has (1 - N)</text>
+<rect x="945.4209999999999" y="795.4499999999999" width="76.17800000000003" height="20.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="0.5" />
+<text x="983.51" y="805.5999999999999" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">receives (1 - N)</text>
+<rect x="909.595" y="353.85" width="51.230000000000004" height="20.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="0.5" />
+<text x="935.21" y="364" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">has (1 - N)</text>
+<rect x="1177.8666666666668" y="619.85" width="83.30600000000003" height="20.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="0.5" />
+<text x="1219.5196666666668" y="630" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">booked_in (1 - N)</text>
+<rect x="1230.7030000000002" y="528.1443333333334" width="91.62200000000001" height="20.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="0.5" />
+<text x="1276.5140000000001" y="538.2943333333334" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-muted)" dy="3.8499999999999996">reviewed_in (1 - N)</text>
+</svg>

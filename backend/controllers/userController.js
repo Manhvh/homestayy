@@ -68,14 +68,39 @@ export const storeRecentSearchedCities = async (req, res) => {
     }
 };
 
-// Convenient endpoint for testing/demo graduation project: become admin
-// POST /api/user/make-me-admin
-export const makeMeAdmin = async (req, res) => {
+// Update user personal profile
+// PUT /api/user/profile
+export const updateUserProfile = async (req, res) => {
     try {
-        req.user.role = "admin";
-        await req.user.save();
-        res.json({ success: true, message: "Chúc mừng! Bạn hiện đã có quyền Quản trị viên (Admin).", role: "admin" });
+        const { username, phone } = req.body;
+        const user = req.user;
+
+        if (username !== undefined) {
+            if (!username.trim()) {
+                return res.status(400).json({ success: false, message: "Họ và tên không được để trống." });
+            }
+            user.username = username.trim();
+        }
+
+        if (phone !== undefined) {
+            user.phone = phone.trim();
+        }
+
+        if (req.file) {
+            user.image = `/uploads/${req.file.filename}`;
+        } else if (req.body.image !== undefined && req.body.image.trim()) {
+            user.image = req.body.image.trim();
+        }
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Cập nhật thông tin cá nhân thành công!",
+            user: user.toJSON(),
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error("Update profile error:", error);
+        res.status(500).json({ success: false, message: error.message || "Lỗi cập nhật thông tin." });
     }
 };

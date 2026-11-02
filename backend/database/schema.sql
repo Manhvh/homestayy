@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS `rooms` (
     `hotelId` INT NOT NULL,
     `roomType` VARCHAR(100) NOT NULL,
     `pricePerNight` DOUBLE NOT NULL,
+    `maxGuests` INT NOT NULL DEFAULT 2,
     `seasonalPricing` JSON DEFAULT (JSON_ARRAY()),
     `amenities` JSON NOT NULL,
     `images` JSON DEFAULT (JSON_ARRAY()),
@@ -68,6 +69,8 @@ CREATE TABLE IF NOT EXISTS `bookings` (
     `guests` INT NOT NULL DEFAULT 1,
     `status` ENUM('pending', 'confirmed', 'cancelled') DEFAULT 'pending',
     `paymentMethod` VARCHAR(100) DEFAULT 'Pay At Hotel',
+    `couponCode` VARCHAR(50) DEFAULT NULL,
+    `discountAmount` DOUBLE DEFAULT 0,
     `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
@@ -105,30 +108,3 @@ CREATE TABLE IF NOT EXISTS `categories` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_category_name_type` (`name`, `type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Dữ liệu mẫu ban đầu cho danh mục (Seed Data)
-INSERT IGNORE INTO `categories` (`name`, `type`, `description`) VALUES
-('Free WiFi', 'amenity', 'Kết nối Internet tốc độ cao miễn phí'),
-('Free Breakfast', 'amenity', 'Bữa sáng miễn phí hàng ngày'),
-('Room Service', 'amenity', 'Dịch vụ phục vụ tại phòng'),
-('Mountain View', 'amenity', 'Tầm nhìn hướng núi tuyệt đẹp'),
-('Pool Access', 'amenity', 'Hồ bơi ngoài trời hoặc trong nhà'),
-('Air Conditioning', 'amenity', 'Điều hòa nhiệt độ hai chiều'),
-('Kitchen', 'amenity', 'Bếp nấu ăn đầy đủ tiện nghi'),
-('Parking', 'amenity', 'Bãi đỗ xe an toàn miễn phí'),
-('Đà Lạt', 'city', 'Thành phố sương mù và ngàn hoa'),
-('Hà Nội', 'city', 'Thủ đô ngàn năm văn hiến'),
-('TP. Hồ Chí Minh', 'city', 'Trung tâm kinh tế sầm uất'),
-('Đà Nẵng', 'city', 'Thành phố biển đáng sống'),
-('Nha Trang', 'city', 'Vịnh biển nhiệt đới quyến rũ'),
-('Sa Pa', 'city', 'Thị trấn mây mù kỳ vĩ'),
-('Phú Quốc', 'city', 'Đảo ngọc thiên đường nghỉ dưỡng'),
-('Hội An', 'city', 'Đô thị cổ thanh bình'),
-('Vũng Tàu', 'city', 'Thành phố biển nghỉ dưỡng cuối tuần'),
-('Ninh Bình', 'city', 'Quần thể danh thắng Tràng An');
-
--- Dữ liệu tài khoản mẫu (Demo Accounts) - Mật khẩu: password123
-INSERT IGNORE INTO `users` (`id`, `username`, `email`, `password`, `image`, `role`) VALUES
-('user_admin_01', 'Quản Trị Viên', 'admin@homestay.vn', 'e67de5492e95cff0c63fcb23f6ae7afc:04a291ed2322911605a059014369e8eb81c60bb99941e1a22efb2e4dfe73d162914a6ea462e552dfa08d804cfeb44743b4b449e065f0e0a7c6f25cf340e42e96', 'https://api.dicebear.com/7.x/initials/svg?seed=Admin', 'admin'),
-('user_owner_01', 'Trần Văn Chủ Nhà', 'chubay@homestay.vn', 'e67de5492e95cff0c63fcb23f6ae7afc:04a291ed2322911605a059014369e8eb81c60bb99941e1a22efb2e4dfe73d162914a6ea462e552dfa08d804cfeb44743b4b449e065f0e0a7c6f25cf340e42e96', 'https://api.dicebear.com/7.x/initials/svg?seed=ChuNha', 'hotelOwner'),
-('user_guest_01', 'Nguyễn Văn Khách', 'khachhang@homestay.vn', 'e67de5492e95cff0c63fcb23f6ae7afc:04a291ed2322911605a059014369e8eb81c60bb99941e1a22efb2e4dfe73d162914a6ea462e552dfa08d804cfeb44743b4b449e065f0e0a7c6f25cf340e42e96', 'https://api.dicebear.com/7.x/initials/svg?seed=KhachHang', 'user');

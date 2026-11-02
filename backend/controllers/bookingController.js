@@ -1,6 +1,6 @@
 import { Op } from "sequelize";
 import transporter from '../configs/nodemailer.js';
-import { Booking, Hotel, Room, User } from "../models/index.js";
+import { Booking, Hotel, Room, User, Offer } from "../models/index.js";
 
 // Function to check availability of the room
 const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
@@ -38,10 +38,71 @@ export const checkAvailabilityAPI = async (req, res) => {
     }
 };
 
+// Predefined valid exclusive offer coupons
+export const VALID_COUPONS = {
+    SUMMER25: { code: "SUMMER25", percent: 25, maxDiscount: 500000, minNights: 2, title: "Gói Nghỉ Dưỡng Mùa Hè" },
+    ROMANCE20: { code: "ROMANCE20", percent: 20, maxDiscount: 400000, minNights: 1, title: "Kỳ Nghỉ Lãng Mạn Cặp Đôi" },
+    EARLYBIRD30: { code: "EARLYBIRD30", percent: 30, maxDiscount: 600000, minDaysAhead: 14, title: "Ưu Đãi Đặt Sớm Homestay" },
+    WEEKEND15: { code: "WEEKEND15", percent: 15, maxDiscount: 300000, minNights: 1, title: "Cuối Tuần Thảnh Thơi" },
+    WELCOME10: { code: "WELCOME10", percent: 10, maxDiscount: 200000, minNights: 1, title: "Chào Mừng Khách Hàng Mới" },
+    LONGSTAY25: { code: "LONGSTAY25", percent: 25, maxDiscount: 800000, minNights: 4, title: "Lưu Trú Dài Ngày Siêu Tiết Kiệm" },
+};
+
+// API to validate a coupon code
+export const validateCouponAPI = async (req, res) => {
+    try {
+        const { couponCode, subtotal } = req.body;
+        if (!couponCode) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập mã ưu đãi!" });
+        }
+        const cleanCode = couponCode.trim().toUpperCase();
+
+        // 1. Try finding in database Offer table
+        let couponData = null;
+        const dbOffer = await Offer.findOne({ where: { code: cleanCode, isActive: true } });
+        if (dbOffer) {
+            couponData = {
+                code: dbOffer.code,
+                percent: dbOffer.priceOff,
+                maxDiscount: dbOffer.maxDiscount,
+                title: dbOffer.title,
+            };
+        } else if (VALID_COUPONS[cleanCode]) {
+            couponData = VALID_COUPONS[cleanCode];
+        }
+
+        if (!couponData) {
+            return res.json({ success: false, message: "Mã ưu đãi không tồn tại hoặc đã hết hạn!" });
+        }
+
+        const price = Number(subtotal) || 0;
+        let rawDiscount = (price * couponData.percent) / 100;
+        if (couponData.maxDiscount) {
+            rawDiscount = Math.min(rawDiscount, couponData.maxDiscount);
+        }
+        const discountAmount = Math.round(rawDiscount);
+        const finalTotal = Math.max(0, price - discountAmount);
+
+        res.json({
+            success: true,
+            coupon: {
+                code: couponData.code,
+                title: couponData.title,
+                percent: couponData.percent,
+                discountAmount,
+                finalTotal,
+            },
+            message: `Áp dụng thành công mã ${couponData.code} (Giảm ${couponData.percent}%)`
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // API to create a new booking
 export const createBookings = async (req, res) => {
     try {
-        const { room, checkInDate, checkOutDate, guests, paymentMethod } = req.body;
+        const { room, checkInDate, checkOutDate, guests, paymentMethod, couponCode } = req.body;
         const userId = req.user.id;
 
         const isAvailable = await checkAvailability({
@@ -58,6 +119,20 @@ export const createBookings = async (req, res) => {
 
         if (!roomData) {
             return res.status(404).json({ success: false, message: "Không tìm thấy thông tin phòng." });
+        }
+
+        const guestCount = parseInt(guests) || 1;
+        const maxCapacity = roomData.maxGuests || 2;
+
+        if (guestCount < 1) {
+            return res.status(400).json({ success: false, message: "Số lượng khách lưu trú tối thiểu là 1 người." });
+        }
+
+        if (guestCount > maxCapacity) {
+            return res.status(400).json({
+                success: false,
+                message: `Phòng này chỉ phục vụ tối đa ${maxCapacity} khách. Vui lòng giảm số lượng khách hoặc đặt thêm phòng.`
+            });
         }
 
         const checkIn = new Date(checkInDate);
@@ -81,6 +156,33 @@ export const createBookings = async (req, res) => {
             cur.setDate(cur.getDate() + 1);
         }
 
+        let discountAmount = 0;
+        let appliedCouponCode = null;
+        if (couponCode && typeof couponCode === "string") {
+            const cleanCode = couponCode.trim().toUpperCase();
+            let couponData = null;
+            const dbOffer = await Offer.findOne({ where: { code: cleanCode, isActive: true } });
+            if (dbOffer) {
+                couponData = {
+                    code: dbOffer.code,
+                    percent: dbOffer.priceOff,
+                    maxDiscount: dbOffer.maxDiscount,
+                };
+            } else if (VALID_COUPONS[cleanCode]) {
+                couponData = VALID_COUPONS[cleanCode];
+            }
+
+            if (couponData) {
+                let rawDiscount = (totalPrice * couponData.percent) / 100;
+                if (couponData.maxDiscount) {
+                    rawDiscount = Math.min(rawDiscount, couponData.maxDiscount);
+                }
+                discountAmount = Math.round(rawDiscount);
+                appliedCouponCode = couponData.code;
+                totalPrice = Math.max(0, totalPrice - discountAmount);
+            }
+        }
+
         const booking = await Booking.create({
             userId,
             roomId: roomData.id,
@@ -89,6 +191,8 @@ export const createBookings = async (req, res) => {
             checkInDate,
             checkOutDate,
             totalPrice,
+            couponCode: appliedCouponCode,
+            discountAmount,
             status: "pending",
             paymentMethod: paymentMethod || "Pay At Hotel",
         });
@@ -112,7 +216,7 @@ export const createBookings = async (req, res) => {
                             <tr><td style="padding: 6px 0;">📍 <strong>Địa chỉ:</strong></td><td>${roomData.hotel.address}</td></tr>
                             <tr><td style="padding: 6px 0;">📅 <strong>Nhận phòng:</strong></td><td>${new Date(booking.checkInDate).toLocaleDateString()}</td></tr>
                             <tr><td style="padding: 6px 0;">📅 <strong>Trả phòng:</strong></td><td>${new Date(booking.checkOutDate).toLocaleDateString()}</td></tr>
-                            <tr><td style="padding: 6px 0;">💳 <strong>Tổng tiền:</strong></td><td>${totalPrice} USD</td></tr>
+                            <tr><td style="padding: 6px 0;">💳 <strong>Tổng tiền:</strong></td><td>${Number(totalPrice).toLocaleString('vi-VN')} ${process.env.CURRENCY || 'VNĐ'}</td></tr>
                             <tr><td style="padding: 6px 0;">💵 <strong>Thanh toán:</strong></td><td>Trực tiếp tại Homestay khi nhận phòng</td></tr>
                         </table>
                         <p style="margin-top: 20px;">Chúc bạn có một kỳ nghỉ thật tuyệt vời!</p>

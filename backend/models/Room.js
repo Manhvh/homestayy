@@ -19,6 +19,11 @@ const Room = sequelize.define("Room", {
         type: DataTypes.DOUBLE,
         allowNull: false,
     },
+    maxGuests: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 2,
+    },
     seasonalPricing: {
         type: DataTypes.JSON,
         defaultValue: [],

@@ -44,6 +44,15 @@ const Booking = sequelize.define("Booking", {
         type: DataTypes.STRING(100),
         defaultValue: "Pay At Hotel",
     },
+    couponCode: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+    },
+    discountAmount: {
+        type: DataTypes.DOUBLE,
+        allowNull: true,
+        defaultValue: 0,
+    },
 }, {
     tableName: "bookings",
     timestamps: true,

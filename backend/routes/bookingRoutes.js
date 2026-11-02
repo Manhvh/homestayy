@@ -6,12 +6,14 @@ import {
     getUserBookings,
     updateBookingStatus,
     cancelUserBooking,
+    validateCouponAPI,
 } from "../controllers/bookingController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const bookingRouter = express.Router();
 
 bookingRouter.post("/check-availability", checkAvailabilityAPI);
+bookingRouter.post("/validate-coupon", validateCouponAPI);
 bookingRouter.post("/book", protect, createBookings);
 bookingRouter.get("/user", protect, getUserBookings);
 bookingRouter.get("/hotel", protect, getHotelBookings);

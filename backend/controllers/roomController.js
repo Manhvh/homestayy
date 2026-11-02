@@ -4,7 +4,7 @@ import { Hotel, Room, Booking, User } from "../models/index.js";
 // API to create a new room for a hotel
 export const createRoom = async (req, res) => {
     try {
-        const { roomType, pricePerNight, amenities, seasonalPricing } = req.body;
+        const { roomType, pricePerNight, amenities, seasonalPricing, maxGuests } = req.body;
 
         const hotel = await Hotel.findOne({ where: { ownerId: req.user.id } });
 
@@ -31,6 +31,7 @@ export const createRoom = async (req, res) => {
             hotelId: hotel.id,
             roomType,
             pricePerNight: +pricePerNight,
+            maxGuests: maxGuests ? Math.max(1, parseInt(maxGuests)) : 2,
             amenities: typeof amenities === "string" ? JSON.parse(amenities) : amenities,
             seasonalPricing: parsedSeasonal,
             images,
@@ -45,12 +46,17 @@ export const createRoom = async (req, res) => {
     }
 };
 
-// API to get All Rooms with optional date filter (checkIn, checkOut)
+// API to get All Rooms with optional date and guests filter
 export const getRooms = async (req, res) => {
     try {
-        const { checkIn, checkOut, destination } = req.query;
+        const { checkIn, checkOut, destination, guests } = req.query;
 
         let whereClause = { isAvailable: true };
+
+        // Filter by capacity (max guests room can accommodate)
+        if (guests && !isNaN(Number(guests)) && Number(guests) > 0) {
+            whereClause.maxGuests = { [Op.gte]: Number(guests) };
+        }
 
         // Exclude rooms that are already booked
         if (checkIn && checkOut) {
@@ -139,7 +145,7 @@ export const getOwnerRooms = async (req, res) => {
 export const updateRoom = async (req, res) => {
     try {
         const { id } = req.params;
-        const { roomType, pricePerNight, amenities, seasonalPricing } = req.body;
+        const { roomType, pricePerNight, amenities, seasonalPricing, maxGuests, isAvailable } = req.body;
 
         const hotelData = await Hotel.findOne({ where: { ownerId: req.user.id } });
         if (!hotelData) {
@@ -153,11 +159,28 @@ export const updateRoom = async (req, res) => {
 
         if (roomType) room.roomType = roomType;
         if (pricePerNight !== undefined) room.pricePerNight = +pricePerNight;
-        if (amenities) {
-            room.amenities = typeof amenities === "string" ? JSON.parse(amenities) : amenities;
+        if (maxGuests !== undefined) room.maxGuests = Math.max(1, parseInt(maxGuests));
+        if (isAvailable !== undefined) room.isAvailable = isAvailable === true || isAvailable === 'true';
+
+        if (amenities !== undefined) {
+            if (typeof amenities === "string") {
+                try {
+                    room.amenities = JSON.parse(amenities);
+                } catch {
+                    room.amenities = amenities.split(',').map(s => s.trim()).filter(Boolean);
+                }
+            } else {
+                room.amenities = amenities;
+            }
         }
+
         if (seasonalPricing !== undefined) {
             room.seasonalPricing = typeof seasonalPricing === "string" ? JSON.parse(seasonalPricing) : seasonalPricing;
+        }
+
+        if (req.files && req.files.length > 0) {
+            const uploadedUrls = req.files.map(file => `/uploads/${file.filename}`);
+            room.images = uploadedUrls;
         }
 
         await room.save();
@@ -208,6 +231,37 @@ export const deleteRoom = async (req, res) => {
         res.json({ success: true, message: "Đã xóa phòng thành công!" });
     } catch (error) {
         console.error("Delete room error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// API to get a single room by ID
+export const getRoomById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const room = await Room.findByPk(id, {
+            include: [
+                {
+                    model: Hotel,
+                    as: "hotel",
+                    include: [
+                        {
+                            model: User,
+                            as: "owner",
+                            attributes: ["id", "username", "email", "image"],
+                        }
+                    ]
+                }
+            ]
+        });
+
+        if (!room) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy thông tin phòng nghỉ." });
+        }
+
+        res.json({ success: true, room });
+    } catch (error) {
+        console.error("Get room by id error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
