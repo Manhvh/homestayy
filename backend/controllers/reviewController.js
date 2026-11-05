@@ -1,4 +1,5 @@
-import { Review, Hotel, User } from "../models/index.js";
+import { Op } from "sequelize";
+import { Review, Hotel, User, Booking } from "../models/index.js";
 
 // API to create a new review
 export const createReview = async (req, res) => {
@@ -18,6 +19,23 @@ export const createReview = async (req, res) => {
         const hotel = await Hotel.findByPk(hotelId);
         if (!hotel) {
             return res.status(404).json({ success: false, message: "Không tìm thấy homestay." });
+        }
+
+        if (req.user.role !== "admin") {
+            const hasBooking = await Booking.findOne({
+                where: {
+                    userId,
+                    hotelId,
+                    status: { [Op.ne]: "cancelled" },
+                }
+            });
+
+            if (!hasBooking) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Chỉ khách hàng đã đặt phòng tại homestay này mới có thể gửi đánh giá."
+                });
+            }
         }
 
         const review = await Review.create({

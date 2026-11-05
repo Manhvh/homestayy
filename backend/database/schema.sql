@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `username` VARCHAR(255) NOT NULL,
     `email` VARCHAR(255) NOT NULL,
     `password` VARCHAR(255) NULL,
+    `phone` VARCHAR(50) DEFAULT '',
     `image` TEXT NULL,
     `role` ENUM('user', 'hotelOwner', 'admin') DEFAULT 'user',
     `isBlocked` BOOLEAN DEFAULT FALSE,
@@ -32,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `hotels` (
     `city` VARCHAR(100) NOT NULL,
     `description` TEXT,
     `image` TEXT,
-    `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'approved',
+    `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     `ownerId` VARCHAR(255) NOT NULL,
     `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -107,4 +108,28 @@ CREATE TABLE IF NOT EXISTS `categories` (
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_category_name_type` (`name`, `type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 7. Bảng chương trình ưu đãi & mã khuyến mãi (Offers)
+CREATE TABLE IF NOT EXISTS `offers` (
+    `id` INT AUTO_INCREMENT NOT NULL,
+    `code` VARCHAR(50) NOT NULL,
+    `title` VARCHAR(255) NOT NULL,
+    `description` TEXT,
+    `priceOff` INT NOT NULL DEFAULT 20,
+    `maxDiscount` DOUBLE DEFAULT 500000,
+    `minNights` INT DEFAULT 1,
+    `expiryDate` VARCHAR(50) NOT NULL,
+    `badge` VARCHAR(50) DEFAULT 'HOT DEAL',
+    `category` VARCHAR(50) DEFAULT 'summer',
+    `terms` JSON DEFAULT (JSON_ARRAY()),
+    `image` TEXT,
+    `isActive` BOOLEAN DEFAULT TRUE,
+    `hotelId` INT DEFAULT NULL,
+    `ownerId` VARCHAR(255) DEFAULT NULL,
+    `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    CONSTRAINT `fk_offers_hotel` FOREIGN KEY (`hotelId`) REFERENCES `hotels` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT `fk_offers_owner` FOREIGN KEY (`ownerId`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

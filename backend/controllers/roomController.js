@@ -196,10 +196,18 @@ export const updateRoom = async (req, res) => {
 export const toggleRoomAvailability = async (req, res) => {
     try {
         const { roomId } = req.body;
-        const roomData = await Room.findByPk(roomId);
+        const hotelData = await Hotel.findOne({ where: { ownerId: req.user.id } });
+        if (!hotelData && req.user.role !== "admin") {
+            return res.status(403).json({ success: false, message: "Không có quyền thực hiện." });
+        }
 
+        const roomData = await Room.findByPk(roomId);
         if (!roomData) {
             return res.status(404).json({ success: false, message: "Không tìm thấy phòng." });
+        }
+
+        if (req.user.role !== "admin" && roomData.hotelId !== hotelData.id) {
+            return res.status(403).json({ success: false, message: "Bạn không có quyền thay đổi trạng thái phòng của homestay khác." });
         }
 
         roomData.isAvailable = !roomData.isAvailable;

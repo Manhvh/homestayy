@@ -135,6 +135,7 @@ const RoomDetails = () => {
       const { data } = await axios.post("/api/bookings/validate-coupon", {
         couponCode: code,
         subtotal: estimatedTotal,
+        nights: numberOfNights > 0 ? numberOfNights : undefined,
       });
       if (data.success && data.coupon) {
         setAppliedCoupon(data.coupon);
@@ -144,8 +145,12 @@ const RoomDetails = () => {
       } else {
         toast.error(data.message || "Mã ưu đãi không hợp lệ!");
       }
-    } catch {
-      // Local fallback
+    } catch (error) {
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+        return;
+      }
+      // Local fallback when offline
       const found = exclusiveOffers.find((o) => o.code.toUpperCase() === code);
       if (found) {
         setAppliedCoupon({

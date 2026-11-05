@@ -10,7 +10,7 @@ const DEFAULT_OFFERS = [
         priceOff: 25,
         maxDiscount: 500000,
         minNights: 2,
-        expiryDate: "2026-08-31",
+        expiryDate: "2027-08-31",
         badge: "HOT DEAL",
         category: "summer",
         terms: [
@@ -29,7 +29,7 @@ const DEFAULT_OFFERS = [
         priceOff: 20,
         maxDiscount: 400000,
         minNights: 1,
-        expiryDate: "2026-09-20",
+        expiryDate: "2027-09-20",
         badge: "LÃNG MẠN",
         category: "couple",
         terms: [
@@ -48,7 +48,7 @@ const DEFAULT_OFFERS = [
         priceOff: 30,
         maxDiscount: 600000,
         minNights: 1,
-        expiryDate: "2026-09-25",
+        expiryDate: "2027-09-25",
         badge: "TIẾT KIỆM 30%",
         category: "early",
         terms: [
@@ -67,7 +67,7 @@ const DEFAULT_OFFERS = [
         priceOff: 15,
         maxDiscount: 300000,
         minNights: 1,
-        expiryDate: "2026-10-31",
+        expiryDate: "2027-10-31",
         badge: "CUỐI TUẦN",
         category: "weekend",
         terms: [
@@ -85,7 +85,7 @@ const DEFAULT_OFFERS = [
         priceOff: 10,
         maxDiscount: 200000,
         minNights: 1,
-        expiryDate: "2026-12-31",
+        expiryDate: "2027-12-31",
         badge: "THÀNH VIÊN",
         category: "all",
         terms: [
@@ -103,7 +103,7 @@ const DEFAULT_OFFERS = [
         priceOff: 25,
         maxDiscount: 800000,
         minNights: 4,
-        expiryDate: "2026-11-15",
+        expiryDate: "2027-11-15",
         badge: "DÀI NGÀY",
         category: "longstay",
         terms: [
@@ -123,6 +123,12 @@ const ensureDefaultOffers = async () => {
         if (count === 0) {
             await Offer.bulkCreate(DEFAULT_OFFERS);
             console.log("Auto-seeded default exclusive offers into database.");
+        } else {
+            // Ensure existing global default offers have future expiry dates
+            await Offer.update(
+                { expiryDate: "2027-12-31" },
+                { where: { ownerId: null, expiryDate: { [Op.lt]: "2027-01-01" } } }
+            );
         }
     } catch (err) {
         console.warn("Could not check/seed offers:", err.message);
@@ -161,21 +167,13 @@ export const getOwnerOffers = async (req, res) => {
             orConditions.push({ hotelId });
         }
 
-        let offers = await Offer.findAll({
+        const offers = await Offer.findAll({
             where: {
                 [Op.or]: orConditions,
             },
             include: [{ model: Hotel, as: "hotel", attributes: ["id", "name", "city"] }],
             order: [["createdAt", "DESC"]],
         });
-
-        // Fallback: If still empty, return all offers
-        if (offers.length === 0) {
-            offers = await Offer.findAll({
-                include: [{ model: Hotel, as: "hotel", attributes: ["id", "name", "city"] }],
-                order: [["createdAt", "DESC"]],
-            });
-        }
 
         res.json({ success: true, offers });
     } catch (error) {
@@ -187,6 +185,13 @@ export const getOwnerOffers = async (req, res) => {
 // 3. Create a new offer by Hotel Owner
 export const createOffer = async (req, res) => {
     try {
+        if (req.user.role !== "hotelOwner" && req.user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Chỉ Chủ Homestay hoặc Quản trị viên mới có quyền tạo chương trình ưu đãi!",
+            });
+        }
+
         const {
             code,
             title,
@@ -235,7 +240,7 @@ export const createOffer = async (req, res) => {
 
         const cleanCode = code.trim().toUpperCase();
 
-        // Check if code already exists for this owner
+        // Check if code already exists
         const existing = await Offer.findOne({ where: { code: cleanCode } });
         if (existing) {
             return res.status(400).json({
@@ -275,11 +280,25 @@ export const createOffer = async (req, res) => {
 // 4. Update an existing offer
 export const updateOffer = async (req, res) => {
     try {
+        if (req.user.role !== "hotelOwner" && req.user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền chỉnh sửa chương trình ưu đãi!",
+            });
+        }
+
         const { id } = req.params;
         const offer = await Offer.findByPk(id);
 
         if (!offer) {
             return res.status(404).json({ success: false, message: "Không tìm thấy chương trình ưu đãi!" });
+        }
+
+        if (offer.ownerId && offer.ownerId !== req.user.id && req.user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền chỉnh sửa ưu đãi của chủ homestay khác!",
+            });
         }
 
         const {
@@ -341,12 +360,28 @@ export const updateOffer = async (req, res) => {
 // 5. Delete an offer
 export const deleteOffer = async (req, res) => {
     try {
-        const { id } = req.params;
-        const count = await Offer.destroy({ where: { id } });
+        if (req.user.role !== "hotelOwner" && req.user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền xóa chương trình ưu đãi!",
+            });
+        }
 
-        if (!count) {
+        const { id } = req.params;
+        const offer = await Offer.findByPk(id);
+
+        if (!offer) {
             return res.status(404).json({ success: false, message: "Không tìm thấy ưu đãi cần xóa!" });
         }
+
+        if (offer.ownerId && offer.ownerId !== req.user.id && req.user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền xóa ưu đãi của chủ homestay khác!",
+            });
+        }
+
+        await offer.destroy();
 
         res.json({ success: true, message: "Đã xóa ưu đãi thành công!" });
     } catch (error) {
@@ -358,11 +393,25 @@ export const deleteOffer = async (req, res) => {
 // 6. Toggle offer active status
 export const toggleOfferStatus = async (req, res) => {
     try {
+        if (req.user.role !== "hotelOwner" && req.user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền thay đổi trạng thái ưu đãi!",
+            });
+        }
+
         const { id } = req.body;
         const offer = await Offer.findByPk(id);
 
         if (!offer) {
             return res.status(404).json({ success: false, message: "Không tìm thấy chương trình ưu đãi!" });
+        }
+
+        if (offer.ownerId && offer.ownerId !== req.user.id && req.user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền bật/tắt ưu đãi của chủ homestay khác!",
+            });
         }
 
         offer.isActive = !offer.isActive;

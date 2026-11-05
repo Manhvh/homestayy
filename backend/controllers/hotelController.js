@@ -26,7 +26,7 @@ export const registerHotel = async (req, res) => {
             city,
             description: description || "",
             ownerId,
-            status: "approved",
+            status: "pending",
         });
 
         await User.update({ role: "hotelOwner" }, { where: { id: ownerId } });
