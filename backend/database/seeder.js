@@ -1,4 +1,6 @@
-import { sequelize, User, Hotel, Room, Booking, Review, Category } from "../models/index.js";
+import "dotenv/config";
+import connectDB from "../configs/db.js";
+import { sequelize, syncDatabase, User, Hotel, Room, Booking, Review, Category } from "../models/index.js";
 import { hashPassword } from "../utils/authUtils.js";
 
 /**
@@ -19,8 +21,9 @@ export const seedDatabase = async () => {
     console.log("🚀 Database Seeding...");
 
     try {
-        // Kiểm tra kết nối cơ sở dữ liệu
-        await sequelize.authenticate();
+        // Kiểm tra kết nối và đồng bộ bảng cơ sở dữ liệu
+        await connectDB();
+        await syncDatabase();
         console.log("✅ Connect MySQL success");
 
         // Tạm thời vô hiệu hóa kiểm tra khóa ngoại để dọn sạch dữ liệu cũ an toàn

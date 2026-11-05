@@ -13,7 +13,10 @@ export const createRoom = async (req, res) => {
         // Save local uploads if files exist
         let images = [];
         if (req.files && req.files.length > 0) {
-            const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4000}`;
+            const backendUrl =
+                process.env.BACKEND_URL ||
+                process.env.RENDER_EXTERNAL_URL ||
+                `${req.protocol}://${req.get("host")}`;
             images = req.files.map(file => `${backendUrl}/uploads/${file.filename}`);
         }
 
@@ -179,7 +182,11 @@ export const updateRoom = async (req, res) => {
         }
 
         if (req.files && req.files.length > 0) {
-            const uploadedUrls = req.files.map(file => `/uploads/${file.filename}`);
+            const backendUrl =
+                process.env.BACKEND_URL ||
+                process.env.RENDER_EXTERNAL_URL ||
+                `${req.protocol}://${req.get("host")}`;
+            const uploadedUrls = req.files.map(file => `${backendUrl}/uploads/${file.filename}`);
             room.images = uploadedUrls;
         }
 
