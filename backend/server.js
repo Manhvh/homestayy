@@ -3,6 +3,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import connectDB from './configs/db.js';
 import { syncDatabase } from './models/index.js';
+import { verifyMailer } from './configs/nodemailer.js';
 import authRouter from './routes/authRoutes.js';
 import userRouter from './routes/userRoutes.js';
 import hotelRouter from './routes/hotelRoutes.js';
@@ -13,10 +14,11 @@ import categoryRouter from './routes/categoryRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
 import offerRouter from './routes/offerRoutes.js';
 
-// Connect to MySQL and synchronize tables
+// Connect to MySQL, synchronize tables, and verify Nodemailer SMTP connection
 const initServer = async () => {
     await connectDB();
     await syncDatabase();
+    await verifyMailer();
 };
 initServer();
 

@@ -7,6 +7,7 @@ import {
     updateBookingStatus,
     cancelUserBooking,
     validateCouponAPI,
+    sendBookingMail,
 } from "../controllers/bookingController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -18,6 +19,7 @@ bookingRouter.post("/book", protect, createBookings);
 bookingRouter.get("/user", protect, getUserBookings);
 bookingRouter.get("/hotel", protect, getHotelBookings);
 bookingRouter.put("/:id/status", protect, updateBookingStatus);
+bookingRouter.post("/:id/send-mail", protect, sendBookingMail);
 bookingRouter.put("/:id/cancel", protect, cancelUserBooking);
 
 export default bookingRouter;

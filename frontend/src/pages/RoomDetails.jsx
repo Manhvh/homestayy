@@ -29,15 +29,16 @@ const RoomDetails = () => {
 
   const [isAvailable, setIsAvailable] = useState(false);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [isBooked, setIsBooked] = useState(false);
 
   // Close modal helper
   const closeModal = useCallback(() => {
-    if (!isBooking) {
+    if (!isLoading && !isBooking) {
       setShowBookingModal(false);
     }
-  }, [isBooking]);
+  }, [isLoading, isBooking]);
 
   // Lock body scroll and listen for Escape key when modal is open
   useEffect(() => {
@@ -238,6 +239,7 @@ const RoomDetails = () => {
 
   // Check if the Room is Available
   const checkAvailability = async () => {
+    if (isCheckingAvailability || isLoading || isBooking) return;
     try {
       setIsCheckingAvailability(true);
 
@@ -287,6 +289,7 @@ const RoomDetails = () => {
 
   // Require user to be logged in before opening booking popup
   const handleOpenBookingModal = () => {
+    if (isLoading || isBooking || isBooked) return;
     if (!user) {
       openLoginModal();
       return;
@@ -296,9 +299,10 @@ const RoomDetails = () => {
 
   // Submit Handler to book
   const onSubmitHandler = async (e) => {
-    try {
-      e.preventDefault();
+    e.preventDefault();
+    if (isLoading || isBooking || isBooked || isCheckingAvailability) return;
 
+    try {
       if (!user) {
         toast.error("Vui lòng đăng nhập để tiến hành đặt phòng!");
         openLoginModal();
@@ -320,8 +324,8 @@ const RoomDetails = () => {
         return;
       }
 
+      setIsLoading(true);
       setIsBooking(true);
-      setIsBooked(true);
 
       const roomId = room?.id || room?._id || id;
       const token = await getToken();
@@ -341,18 +345,23 @@ const RoomDetails = () => {
       );
 
       if (data.success) {
+        setIsBooked(true);
         toast.success(data.message || "Đặt phòng thành công!");
-        setShowBookingModal(false);
         setTimeout(() => {
+          setShowBookingModal(false);
+          setIsLoading(false);
+          setIsBooking(false);
           navigate("/my-bookings");
           window.scrollTo(0, 0);
-        }, 1500);
+        }, 1200);
       } else {
+        setIsLoading(false);
         setIsBooking(false);
         setIsBooked(false);
         toast.error(data.message);
       }
     } catch (error) {
+      setIsLoading(false);
       setIsBooking(false);
       setIsBooked(false);
       toast.error(error.response?.data?.message || error.message || "Không thể tạo đơn đặt phòng");
@@ -544,9 +553,10 @@ const RoomDetails = () => {
           <button
             type="button"
             onClick={handleOpenBookingModal}
-            className="w-full mt-5 px-5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0 text-sm"
+            disabled={isLoading || isBooking || isBooked}
+            className="w-full mt-5 px-5 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0 text-sm"
           >
-            <span>{user ? "Đặt phòng" : "Đăng nhập để đặt phòng"}</span>
+            <span>{isLoading ? "Đang xử lý đặt phòng..." : user ? "Đặt phòng" : "Đăng nhập để đặt phòng"}</span>
           </button>
           {!user && (
             <p className="text-[11px] text-amber-700 bg-amber-50/80 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2.5 text-center flex items-center justify-center gap-1.5">
@@ -706,9 +716,10 @@ const RoomDetails = () => {
         <button
           type="button"
           onClick={handleOpenBookingModal}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow flex items-center gap-1.5 cursor-pointer"
+          disabled={isLoading || isBooking || isBooked}
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm shadow flex items-center gap-1.5 cursor-pointer"
         >
-          <span>{user ? "Đặt phòng" : "Đăng nhập để đặt"}</span>
+          <span>{isLoading ? "Đang xử lý..." : user ? "Đặt phòng" : "Đăng nhập để đặt"}</span>
         </button>
       </div>
 
@@ -726,8 +737,8 @@ const RoomDetails = () => {
             <button
               type="button"
               onClick={closeModal}
-              disabled={isBooking}
-              className="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition cursor-pointer font-bold text-base"
+              disabled={isLoading || isBooking}
+              className="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center transition cursor-pointer font-bold text-base"
               title="Đóng (Esc)"
             >
               ✕
@@ -1008,28 +1019,33 @@ const RoomDetails = () => {
                 <button
                   type="button"
                   onClick={closeModal}
-                  disabled={isBooking}
-                  className="w-full sm:w-1/3 px-5 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition cursor-pointer"
+                  disabled={isLoading || isBooking}
+                  className="w-full sm:w-1/3 px-5 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
                 >
                   Đóng
                 </button>
                 <button
                   type="submit"
-                  disabled={isCheckingAvailability || isBooking || isBooked}
-                  className={`w-full sm:w-2/3 px-6 py-3 rounded-xl font-bold text-white text-sm transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 ${
+                  disabled={isLoading || isCheckingAvailability || isBooking || isBooked}
+                  className={`w-full sm:w-2/3 px-6 py-3 rounded-xl font-bold text-white text-sm transition-all shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
                     isBooked
                       ? "bg-green-600"
+                      : isLoading || isBooking
+                      ? "bg-blue-500"
                       : isAvailable
                       ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 animate-pulse"
                       : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"
                   }`}
                 >
+                  {(isLoading || isBooking || isCheckingAvailability) && (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                  )}
                   {!user ? (
                     <span>Đăng nhập để đặt phòng</span>
                   ) : isBooked ? (
-                    <span>Đã đặt phòng thành công</span>
-                  ) : isBooking ? (
-                    <span>Đang tạo đơn đặt phòng...</span>
+                    <span>Đã đặt phòng thành công! Đang chuyển hướng...</span>
+                  ) : isLoading || isBooking ? (
+                    <span>Đang xử lý đặt phòng...</span>
                   ) : isCheckingAvailability ? (
                     <span>Đang kiểm tra lịch trống...</span>
                   ) : isAvailable ? (

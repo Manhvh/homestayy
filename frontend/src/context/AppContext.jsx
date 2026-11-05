@@ -82,10 +82,28 @@ export const AppProvider = ({ children }) => {
         }
     };
 
-    // Native Register
-    const register = async (username, email, password, role = 'user', phone = '') => {
+    // Request verification code before registering
+    const sendVerifyCode = async (email, username = '') => {
         try {
-            const { data } = await axios.post('/api/auth/register', { username, email, password, role, phone });
+            const { data } = await axios.post('/api/auth/send-verify-code', { email, username });
+            if (data.success) {
+                toast.success(data.message || 'Đã gửi mã xác thực!');
+                return { success: true, verifyCode: data.verifyCode, mailSent: data.mailSent };
+            } else {
+                toast.error(data.message || 'Không thể gửi mã xác thực.');
+                return { success: false, message: data.message };
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || error.message || 'Lỗi gửi mã xác thực.';
+            toast.error(msg);
+            return { success: false, message: msg };
+        }
+    };
+
+    // Native Register
+    const register = async (username, email, password, role = 'user', phone = '', codeVerify = '') => {
+        try {
+            const { data } = await axios.post('/api/auth/register', { username, email, password, role, phone, codeVerify });
             if (data.success) {
                 setToken(data.token);
                 setUser(data.user);
@@ -241,6 +259,7 @@ export const AppProvider = ({ children }) => {
         getToken,
         login,
         register,
+        sendVerifyCode,
         logout,
         openLoginModal,
         closeLoginModal,

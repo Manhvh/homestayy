@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 const AuthModal = ({ isOpen, onClose }) => {
-  const { login, register, toast } = useAppContext();
+  const { login, register, sendVerifyCode, toast } = useAppContext();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState('');
 
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
     phone: '',
+    codeVerify: '',
     role: 'user', // 'user' or 'hotelOwner'
   });
 
@@ -18,6 +21,22 @@ const AuthModal = ({ isOpen, onClose }) => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSendVerifyCode = async () => {
+    if (!formData.email) {
+      toast.error("Vui lòng nhập địa chỉ email trước khi nhận mã xác thực.");
+      return;
+    }
+    setSendingCode(true);
+    try {
+      const res = await sendVerifyCode(formData.email, formData.username);
+      if (res.success && res.verifyCode) {
+        setGeneratedCode(res.verifyCode);
+      }
+    } finally {
+      setSendingCode(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -41,12 +60,18 @@ const AuthModal = ({ isOpen, onClose }) => {
           setLoading(false);
           return;
         }
+        if (!formData.codeVerify) {
+          toast.error("Vui lòng lấy và nhập mã xác thực (codeVerify) để đăng ký tài khoản.");
+          setLoading(false);
+          return;
+        }
         const res = await register(
           formData.username,
           formData.email,
           formData.password,
           formData.role,
-          formData.phone
+          formData.phone,
+          formData.codeVerify
         );
         if (res.success) {
           onClose();
@@ -70,9 +95,10 @@ const AuthModal = ({ isOpen, onClose }) => {
       const account = demoAccounts[demoRole];
       let res = await login(account.email, account.password);
       
-      // If demo account doesn't exist yet, auto register it
+      // If demo account doesn't exist yet, auto register it with verification code
       if (!res.success) {
-        res = await register(account.name, account.email, account.password, demoRole);
+        const codeRes = await sendVerifyCode(account.email, account.name);
+        res = await register(account.name, account.email, account.password, demoRole, '', codeRes.verifyCode || '');
       }
 
       if (res.success) {
@@ -189,6 +215,33 @@ const AuthModal = ({ isOpen, onClose }) => {
                   placeholder="Ví dụ: 0912345678"
                   className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 />
+              </div>
+            )}
+
+            {!isLoginMode && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Mã xác thực tài khoản <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="codeVerify"
+                    required
+                    value={formData.codeVerify}
+                    onChange={handleChange}
+                    placeholder="Nhập mã 6 số"
+                    className="flex-1 px-3.5 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition tracking-widest font-semibold"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendVerifyCode}
+                    disabled={sendingCode}
+                    className="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold transition whitespace-nowrap cursor-pointer disabled:opacity-50"
+                  >
+                    {sendingCode ? 'Đang gửi...' : 'Nhận mã xác thực'}
+                  </button>
+                </div>
               </div>
             )}
 

@@ -53,6 +53,15 @@ const Booking = sequelize.define("Booking", {
         allowNull: true,
         defaultValue: 0,
     },
+    isSendMail: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    bookingCode: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+    },
 }, {
     tableName: "bookings",
     timestamps: true,

@@ -191,8 +191,13 @@ export const seedDatabase = async () => {
             }
         ];
 
-        const createdUsers = await User.bulkCreate(usersData);
-        console.log(`✅ Đã nạp thành công ${createdUsers.length} người dùng.`);
+        const createdUsers = await User.bulkCreate(
+            usersData.map((u, idx) => ({
+                ...u,
+                codeVerify: u.codeVerify || String(100000 + (idx + 1) * 11111).slice(0, 6),
+            }))
+        );
+        console.log(`✅ Insert ${createdUsers.length} users.`);
 
         // ==========================================
         // 2. SEED CATEGORIES (Danh mục Tiện ích & Khu vực)
@@ -229,7 +234,7 @@ export const seedDatabase = async () => {
         ];
 
         const createdCategories = await Category.bulkCreate(categoriesData);
-        console.log(`✅ Đã nạp thành công ${createdCategories.length} danh mục (Tiện ích & Khu vực).`);
+        console.log(`✅ INSERT ${createdCategories.length} danh mục (Tiện ích & Khu vực).`);
 
         // ==========================================
         // 3. SEED HOTELS / HOMESTAYS
@@ -298,7 +303,7 @@ export const seedDatabase = async () => {
         ];
 
         const createdHotels = await Hotel.bulkCreate(hotelsData);
-        console.log(`✅ Đã nạp thành công ${createdHotels.length} Homestay & Khách sạn.`);
+        console.log(`✅ INSERT ${createdHotels.length} Homestay & Khách sạn.`);
 
         const [hotelDalat, hotelDanang, hotelSapa, hotelPhuQuoc, hotelHanoi, hotelHcm] = createdHotels;
 
@@ -551,7 +556,7 @@ export const seedDatabase = async () => {
         ];
 
         const createdRooms = await Room.bulkCreate(roomsData);
-        console.log(`✅ Đã nạp thành công ${createdRooms.length} phòng nghỉ.`);
+        console.log(`✅ INSERT ${createdRooms.length} phòng nghỉ.`);
 
         // ==========================================
         // 5. SEED BOOKINGS (Đơn đặt phòng đa dạng trạng thái)
@@ -574,7 +579,8 @@ export const seedDatabase = async () => {
                 totalPrice: 840000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 2. Khách sắp tới nhận phòng tuần sau (Upcoming confirmed)
             {
@@ -586,7 +592,8 @@ export const seedDatabase = async () => {
                 totalPrice: 1350000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 3. Đơn chờ duyệt (Pending booking) - để chủ nhà bấm Duyệt/Từ chối
             {
@@ -598,7 +605,8 @@ export const seedDatabase = async () => {
                 totalPrice: 2250000,
                 guests: 4,
                 status: "pending",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 4. Lịch sử chuyến đi đã hoàn tất tháng trước (Past stay)
             {
@@ -610,7 +618,8 @@ export const seedDatabase = async () => {
                 totalPrice: 960000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 5. Đơn khách đã hủy (Cancelled booking)
             {
@@ -622,7 +631,8 @@ export const seedDatabase = async () => {
                 totalPrice: 560000,
                 guests: 1,
                 status: "cancelled",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 6. Khách đang ở tại Đà Nẵng
             {
@@ -634,7 +644,8 @@ export const seedDatabase = async () => {
                 totalPrice: 1650000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 7. Đơn sắp tới tại Sa Pa
             {
@@ -646,7 +657,8 @@ export const seedDatabase = async () => {
                 totalPrice: 870000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 8. Đơn chờ duyệt tại Sa Pa
             {
@@ -658,7 +670,8 @@ export const seedDatabase = async () => {
                 totalPrice: 960000,
                 guests: 2,
                 status: "pending",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 9. Lịch sử đã hoàn tất tại Phú Quốc
             {
@@ -670,7 +683,8 @@ export const seedDatabase = async () => {
                 totalPrice: 1080000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             },
             // 10. Đơn sắp tới tại Hà Nội
             {
@@ -682,12 +696,19 @@ export const seedDatabase = async () => {
                 totalPrice: 540000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel"
+                paymentMethod: "Pay At Hotel",
+                bookingCode: Math.random().toString(36).substring(2, 10)
             }
         ];
 
-        const createdBookings = await Booking.bulkCreate(bookingsData);
-        console.log(`✅ Đã nạp thành công ${createdBookings.length} đơn đặt phòng.`);
+        const createdBookings = await Booking.bulkCreate(
+            bookingsData.map((b, idx) => ({
+                ...b,
+                isSendMail: b.status === "confirmed",
+                bookingCode: b.bookingCode || `bk${String(100000 + (idx + 1) * 13579).slice(0, 6)}`,
+            }))
+        );
+        console.log(`✅ INSERT ${createdBookings.length} bookings.`);
 
         // ==========================================
         // 6. SEED REVIEWS (Đánh giá & phản hồi chất lượng)
@@ -759,10 +780,10 @@ export const seedDatabase = async () => {
         ];
 
         const createdReviews = await Review.bulkCreate(reviewsData);
-        console.log(`✅ Đã nạp thành công ${createdReviews.length} đánh giá khách hàng.`);
+        console.log(`✅ INSERT ${createdReviews.length} reviews`);
 
         console.log("\n========================================================");
-        console.log("🎉 SEED DỮ LIỆU HOÀN TẤT THÀNH CÔNG RỰC RỠ!");
+        console.log("🎉 SEED DỮ LIỆU HOÀN TẤT!");
         console.log("========================================================");
         console.log("TỔNG KẾT BẢNG DỮ LIỆU ĐÃ TẠO:");
         console.log(`- Users: ${createdUsers.length} tài khoản`);

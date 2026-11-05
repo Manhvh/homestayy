@@ -113,7 +113,7 @@ const MyBookings = () => {
                   />
                   <div className="flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                           booking.status === "confirmed" 
                             ? "bg-green-100 text-green-700" 
@@ -123,7 +123,9 @@ const MyBookings = () => {
                         }`}>
                           {booking.status === "confirmed" ? "Đã xác nhận" : booking.status === "cancelled" ? "Đã hủy" : "Đang chờ duyệt"}
                         </span>
-                        <span className="text-xs text-gray-400">Mã: #{String(booking.id || booking._id).slice(-6)}</span>
+                        <span className="text-xs font-mono font-semibold text-gray-500">
+                          Mã: {booking.bookingCode || "-"}
+                        </span>
                       </div>
                       <h4 className="font-playfair text-xl font-bold text-gray-900">
                         {booking.hotel?.name || "Homestay"}

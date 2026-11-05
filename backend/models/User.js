@@ -37,6 +37,11 @@ const User = sequelize.define("User", {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
+    codeVerify: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: null,
+    },
     recentSearchedCities: {
         type: DataTypes.JSON,
         defaultValue: [],

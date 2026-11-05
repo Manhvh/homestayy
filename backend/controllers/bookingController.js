@@ -289,6 +289,8 @@ export const createBookings = async (req, res) => {
             totalPrice = Math.max(0, totalPrice - discountAmount);
         }
 
+        let bookingCode = Math.random().toString(36).substring(2, 10);
+
         const booking = await Booking.create({
             userId,
             roomId: roomData.id,
@@ -301,13 +303,15 @@ export const createBookings = async (req, res) => {
             discountAmount,
             status: "pending",
             paymentMethod: paymentMethod || "Pay At Hotel",
+            isSendMail: false,
+            bookingCode: bookingCode
         }, { transaction: t });
 
         await t.commit();
 
         // Email confirmation
         try {
-            if (process.env.SENDER_EMAIL && req.user.email) {
+            if (process.env.SENDER_EMAIL && process.env.SMTP_USER && req.user.email) {
                 const mailOptions = {
                     from: process.env.SENDER_EMAIL,
                     to: req.user.email,
@@ -319,7 +323,7 @@ export const createBookings = async (req, res) => {
                         <p>Xin chào <strong>${req.user.username}</strong>,</p>
                         <p>Đơn đặt phòng của bạn đã được ghi nhận thành công với thông tin chi tiết:</p>
                         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                            <tr><td style="padding: 6px 0;"><strong>Mã đặt phòng:</strong></td><td>#${booking.id}</td></tr>
+                            <tr><td style="padding: 6px 0;"><strong>Mã đặt phòng:</strong></td><td>#${booking.bookingCode}</td></tr>
                             <tr><td style="padding: 6px 0;"><strong>Homestay:</strong></td><td>${hotelData.name}</td></tr>
                             <tr><td style="padding: 6px 0;"><strong>Địa chỉ:</strong></td><td>${hotelData.address}</td></tr>
                             <tr><td style="padding: 6px 0;"><strong>Nhận phòng:</strong></td><td>${new Date(booking.checkInDate).toLocaleDateString()}</td></tr>
@@ -333,6 +337,8 @@ export const createBookings = async (req, res) => {
                     `
                 };
                 await transporter.sendMail(mailOptions);
+                booking.isSendMail = true;
+                await booking.save();
             }
         } catch (mailError) {
             console.warn("Mail sending skipped:", mailError.message);
@@ -384,7 +390,7 @@ export const getHotelBookings = async (req, res) => {
             include: [
                 { model: Room, as: "room" },
                 { model: Hotel, as: "hotel" },
-                { model: User, as: "user", attributes: ["id", "username", "email", "image"] }
+                { model: User, as: "user", attributes: ["id", "username", "email", "phone", "image"] }
             ],
             order: [["createdAt", "DESC"]]
         });
@@ -413,7 +419,10 @@ export const updateBookingStatus = async (req, res) => {
         }
 
         const booking = await Booking.findByPk(id, {
-            include: [{ model: Hotel, as: "hotel" }]
+            include: [
+                { model: Hotel, as: "hotel" },
+                { model: User, as: "user", attributes: ["id", "username", "email"] }
+            ]
         });
 
         if (!booking) {
@@ -425,15 +434,93 @@ export const updateBookingStatus = async (req, res) => {
         }
 
         booking.status = status;
+        const codeDisplay = booking.bookingCode || booking.id;
+        if (status === "confirmed") {
+            try {
+                if (process.env.SENDER_EMAIL && process.env.SMTP_USER && booking.user?.email) {
+                    await transporter.sendMail({
+                        from: process.env.SENDER_EMAIL,
+                        to: booking.user.email,
+                        subject: `HomeStay - Đơn đặt phòng #${codeDisplay} đã được xác nhận`,
+                        html: `<p>Xin chào <strong>${booking.user.username}</strong>, đơn đặt phòng #${codeDisplay} tại <strong>${booking.hotel.name}</strong> của bạn đã được xác nhận!</p>`,
+                    });
+                }
+            } catch (mailErr) {
+                console.warn("Confirm booking mail skipped:", mailErr.message);
+            }
+            booking.isSendMail = true;
+        }
         await booking.save();
 
         res.json({
             success: true,
-            message: status === "confirmed" ? "Đã xác nhận duyệt đơn đặt phòng!" : "Đã hủy đơn đặt phòng.",
+            message: status === "confirmed" ? "Đã xác nhận duyệt đơn và gửi thông báo tới khách hàng!" : "Đã hủy đơn đặt phòng.",
             booking
         });
     } catch (error) {
         console.error("Update booking status error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// API to send / mark confirmation email as sent to customer
+export const sendBookingMail = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const booking = await Booking.findByPk(id, {
+            include: [
+                { model: Hotel, as: "hotel" },
+                { model: Room, as: "room" },
+                { model: User, as: "user", attributes: ["id", "username", "email", "phone"] }
+            ]
+        });
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy đơn đặt phòng." });
+        }
+
+        if (booking.hotel.ownerId !== req.user.id && req.user.role !== "admin") {
+            return res.status(403).json({ success: false, message: "Bạn không có quyền thực hiện thao tác này." });
+        }
+
+        const codeDisplay = booking.bookingCode || booking.id;
+
+        if (process.env.SENDER_EMAIL && process.env.SMTP_USER && booking.user?.email) {
+            try {
+                await transporter.sendMail({
+                    from: process.env.SENDER_EMAIL,
+                    to: booking.user.email,
+                    subject: `HomeStay - Thông tin đơn đặt phòng #${codeDisplay}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 12px;">
+                            <h2 style="color: #1d4ed8;">Xác nhận thông tin đặt phòng #${codeDisplay}</h2>
+                            <p>Xin chào <strong>${booking.user.username}</strong>,</p>
+                            <p>Thông tin đơn đặt phòng của bạn tại <strong>${booking.hotel.name}</strong>:</p>
+                            <ul>
+                                <li>Mã đặt phòng: <strong>#${codeDisplay}</strong></li>
+                                <li>Phòng: ${booking.room?.roomType || "Phòng tiêu chuẩn"}</li>
+                                <li>Nhận phòng: ${new Date(booking.checkInDate).toLocaleDateString()}</li>
+                                <li>Trả phòng: ${new Date(booking.checkOutDate).toLocaleDateString()}</li>
+                                <li>Tổng tiền: ${Number(booking.totalPrice).toLocaleString('vi-VN')} ${process.env.CURRENCY || 'VNĐ'}</li>
+                            </ul>
+                        </div>
+                    `,
+                });
+            } catch (mailErr) {
+                console.warn("Send booking mail skipped:", mailErr.message);
+            }
+        }
+
+        booking.isSendMail = true;
+        await booking.save();
+
+        res.json({
+            success: true,
+            message: `Đã gửi email xác nhận đơn #${codeDisplay} tới khách hàng!`,
+            booking,
+        });
+    } catch (error) {
+        console.error("Send booking mail error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
