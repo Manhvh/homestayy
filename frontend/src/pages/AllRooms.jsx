@@ -43,6 +43,13 @@ const AllRooms = () => {
   const checkOutQuery = searchParams.get('checkOut') || '';
   const guestsQuery = searchParams.get('guests') || '';
 
+  const [addressSearch, setAddressSearch] = useState(destinationQuery);
+  const [openFilters, setOpenFilters] = useState(false);
+
+  useEffect(() => {
+    setAddressSearch(destinationQuery);
+  }, [destinationQuery]);
+
   const [dateFilters, setDateFilters] = useState({
     checkIn: checkInQuery,
     checkOut: checkOutQuery,
@@ -133,14 +140,14 @@ const AllRooms = () => {
     return 0;
   };
 
-  // Filter Destination
+  // Filter Destination / Address
   const filterDestination = (room) => {
-    if (!destinationQuery) return true;
-    const dest = destinationQuery.toLowerCase();
+    const query = (addressSearch || destinationQuery || '').trim().toLowerCase();
+    if (!query) return true;
     return (
-      (room.hotel?.city && room.hotel.city.toLowerCase().includes(dest)) ||
-      (room.hotel?.name && room.hotel.name.toLowerCase().includes(dest)) ||
-      (room.hotel?.address && room.hotel.address.toLowerCase().includes(dest))
+      (room.hotel?.address && room.hotel.address.toLowerCase().includes(query)) ||
+      (room.hotel?.city && room.hotel.city.toLowerCase().includes(query)) ||
+      (room.hotel?.name && room.hotel.name.toLowerCase().includes(query))
     );
   };
 
@@ -154,7 +161,7 @@ const AllRooms = () => {
     return rooms
       .filter(room => matchesRoomType(room) && matchesPriceRange(room) && matchesAmenities(room) && filterDestination(room) && matchesGuests(room))
       .sort(sortRooms);
-  }, [rooms, selectedFilters, selectedSort, destinationQuery, minPrice, maxPrice, guestsFilter]);
+  }, [rooms, selectedFilters, selectedSort, destinationQuery, addressSearch, minPrice, maxPrice, guestsFilter]);
 
   // Clear All Filters
   const clearFilters = () => {
@@ -162,6 +169,7 @@ const AllRooms = () => {
       roomType: [],
       amenities: [],
     });
+    setAddressSearch('');
     setMinPrice(MIN_PRICE_LIMIT);
     setMaxPrice(MAX_PRICE_LIMIT);
     setDateFilters({ checkIn: '', checkOut: '' });
@@ -173,12 +181,12 @@ const AllRooms = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Header Section */}
-      <div className="relative pt-32 pb-16 px-4 md:px-16 lg:px-24 xl:px-32 overflow-hidden">
+      <div className="relative pt-32 pb-8 px-4 md:px-16 lg:px-24 xl:px-32 overflow-hidden">
         <div className="absolute top-20 right-10 w-72 h-72 bg-gray-200/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-10 left-10 w-96 h-96 bg-gray-300/10 rounded-full blur-3xl"></div>
         
         <div className="relative z-10 max-w-5xl">
-          <div className="inline-block mb-8">
+          <div className="inline-block mb-6">
             <div className="inline-flex items-center gap-3 bg-gray-900 text-white px-6 py-3 rounded-full text-sm font-semibold mb-8">
               <span>Khám phá Homestay & Khách sạn</span>
             </div>
@@ -187,14 +195,57 @@ const AllRooms = () => {
             </h1>
             <div className="w-32 h-1 bg-gray-900 rounded-full"></div>
           </div>
+
+          {/* Search by Address / Location Bar */}
+          <div className="max-w-xl mt-2 mb-4">
+            <div className="relative flex items-center bg-white border border-gray-300 rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
+              <div className="pl-4 pr-2 text-gray-400 flex items-center pointer-events-none">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.5 10.5a7.5 7.5 0 0013.15 6.15z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={addressSearch}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setAddressSearch(val);
+                  if (!val && destinationQuery) {
+                    const nextParams = new URLSearchParams(searchParams);
+                    nextParams.delete('destination');
+                    setSearchParams(nextParams);
+                  }
+                }}
+                placeholder="Tìm kiếm theo địa chỉ, đường, thành phố hoặc tên homestay..."
+                className="w-full py-3 pr-10 text-sm text-gray-800 placeholder-gray-400 bg-transparent outline-none"
+              />
+              {addressSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddressSearch('');
+                    if (destinationQuery) {
+                      const nextParams = new URLSearchParams(searchParams);
+                      nextParams.delete('destination');
+                      setSearchParams(nextParams);
+                    }
+                  }}
+                  className="absolute right-3 text-gray-400 hover:text-gray-600 text-xs font-bold px-2 py-1 rounded-lg hover:bg-gray-100 cursor-pointer"
+                  title="Xóa tìm kiếm"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
           
-          {destinationQuery && (
-            <div className="flex items-center gap-2 mb-4 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded-xl w-fit">
-              <span>Địa điểm đang lọc: <strong>{destinationQuery}</strong></span>
+          {(addressSearch || destinationQuery) && (
+            <div className="flex items-center gap-2 mb-2 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded-xl w-fit text-sm">
+              <span>Địa chỉ / khu vực đang lọc: <strong>{addressSearch || destinationQuery}</strong></span>
               {dateFilters.checkIn && dateFilters.checkOut && (
                 <span>| {dateFilters.checkIn} đến {dateFilters.checkOut}</span>
               )}
-              <button onClick={clearFilters} className="ml-3 text-xs text-blue-600 underline font-semibold hover:text-blue-800">
+              <button onClick={clearFilters} className="ml-3 text-xs text-blue-600 underline font-semibold hover:text-blue-800 cursor-pointer">
                 Xóa bộ lọc
               </button>
             </div>
@@ -334,15 +385,40 @@ const AllRooms = () => {
         </div>
         
         {/* Filters Sidebar */}
-        <div className="bg-white w-full lg:w-80 rounded-2xl shadow-lg border border-gray-200 text-gray-600">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-            <p className="text-base font-semibold text-gray-800">BỘ LỌC TÌM KIẾM</p>
-            <button onClick={clearFilters} className="text-xs font-semibold text-blue-600 hover:text-blue-800 cursor-pointer">
+        <div className="bg-white w-full lg:w-80 rounded-2xl shadow-lg border border-gray-200 text-gray-600 overflow-hidden">
+          <div
+            onClick={() => setOpenFilters(prev => !prev)}
+            className={`flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors select-none ${
+              openFilters ? "border-b border-gray-200" : ""
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <p className="text-base font-semibold text-gray-800">BỘ LỌC TÌM KIẾM</p>
+              <svg
+                className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                  openFilters ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                clearFilters();
+              }}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
+            >
               XÓA TẤT CẢ
             </button>
           </div>
 
-          <div className="p-5 space-y-6">
+          {openFilters && (
+            <div className="p-5 space-y-6">
             {/* Date filter */}
             <div className="pb-4 border-b border-gray-100">
               <p className="font-semibold text-gray-800 mb-3 text-sm">Lọc theo ngày trống</p>
@@ -525,6 +601,7 @@ const AllRooms = () => {
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

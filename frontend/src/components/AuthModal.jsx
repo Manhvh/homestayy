@@ -287,7 +287,7 @@ const AuthModal = ({ isOpen, onClose }) => {
           {/* Quick Demo Buttons for Evaluators */}
           <div className="mt-6 pt-5 border-t border-gray-100">
             <p className="text-xs text-center text-gray-400 font-medium mb-3">
-              Đăng nhập nhanh cho Hội đồng chấm đồ án:
+              Đăng nhập nhanh
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button
