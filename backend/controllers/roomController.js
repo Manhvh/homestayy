@@ -1,5 +1,5 @@
 import { Op } from "sequelize";
-import { Hotel, Room, Booking, User } from "../models/index.js";
+import { Hotel, Room, Booking, User, Review } from "../models/index.js";
 
 // API to create a new room for a hotel
 export const createRoom = async (req, res) => {
@@ -114,7 +114,36 @@ export const getRooms = async (req, res) => {
             );
         }
 
-        res.json({ success: true, rooms });
+        // Attach real averageRating & reviewCount from Reviews table
+        const hotelIds = [...new Set(rooms.map(r => r.hotelId).filter(Boolean))];
+        let reviewsByHotel = {};
+        if (hotelIds.length > 0) {
+            const allReviews = await Review.findAll({
+                where: { hotelId: { [Op.in]: hotelIds } },
+                attributes: ["hotelId", "roomId", "rating"],
+            });
+            for (const rev of allReviews) {
+                const hId = rev.hotelId;
+                if (!reviewsByHotel[hId]) {
+                    reviewsByHotel[hId] = [];
+                }
+                reviewsByHotel[hId].push(Number(rev.rating) || 5);
+            }
+        }
+
+        const roomsWithRatings = rooms.map(r => {
+            const plain = r.toJSON();
+            const ratings = reviewsByHotel[plain.hotelId] || [];
+            const reviewCount = ratings.length;
+            const averageRating = reviewCount > 0
+                ? Number((ratings.reduce((sum, val) => sum + val, 0) / reviewCount).toFixed(1))
+                : 5.0;
+            plain.reviewCount = reviewCount;
+            plain.averageRating = averageRating;
+            return plain;
+        });
+
+        res.json({ success: true, rooms: roomsWithRatings });
 
     } catch (error) {
         console.error("Get rooms error:", error);

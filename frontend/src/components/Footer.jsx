@@ -25,8 +25,8 @@ const Footer = () => {
                 <div>
                     <p className=' font-playfair text-lg text-gray-800 font-bold'>VỀ CHÚNG TÔI</p>
                     <ul className='mt-3 flex flex-col gap-2 text-sm'>
-                        <li><a href="/About" className="hover:text-blue-600 transition">Giới thiệu</a></li>
-                        <li><a href="/Experience" className="hover:text-blue-600 transition">Trải nghiệm</a></li>
+                        <li><a href="/about" className="hover:text-blue-600 transition">Giới thiệu</a></li>
+                        <li><a href="/experience" className="hover:text-blue-600 transition">Trải nghiệm</a></li>
                         <li><a href="/rooms" className="hover:text-blue-600 transition">Danh sách phòng</a></li>
                         <li><a href="#" className="hover:text-blue-600 transition">Tin tức & Blog</a></li>
                         <li><a href="#" className="hover:text-blue-600 transition">Đối tác chủ nhà</a></li>

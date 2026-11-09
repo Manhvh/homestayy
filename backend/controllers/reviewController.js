@@ -1,13 +1,13 @@
 import { Op } from "sequelize";
-import { Review, Hotel, User, Booking } from "../models/index.js";
+import { Review, Hotel, Room, User, Booking } from "../models/index.js";
 
-// API to create a new review
+// API to create a new review (or update if same bookingId)
 export const createReview = async (req, res) => {
     try {
         const { hotelId, roomId, bookingId, rating, comment } = req.body;
         const userId = req.user.id;
 
-        if (!hotelId || !rating || !comment) {
+        if (!hotelId || !rating || !comment || !String(comment).trim()) {
             return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ đánh giá và số sao (1-5)." });
         }
 
@@ -21,16 +21,23 @@ export const createReview = async (req, res) => {
             return res.status(404).json({ success: false, message: "Không tìm thấy homestay." });
         }
 
+        let matchedBooking = null;
         if (req.user.role !== "admin") {
-            const hasBooking = await Booking.findOne({
-                where: {
-                    userId,
-                    hotelId,
-                    status: { [Op.ne]: "cancelled" },
-                }
+            const whereBooking = {
+                userId,
+                hotelId,
+                status: { [Op.ne]: "cancelled" },
+            };
+            if (bookingId) {
+                whereBooking.id = bookingId;
+            }
+
+            matchedBooking = await Booking.findOne({
+                where: whereBooking,
+                order: [["createdAt", "DESC"]],
             });
 
-            if (!hasBooking) {
+            if (!matchedBooking) {
                 return res.status(403).json({
                     success: false,
                     message: "Chỉ khách hàng đã đặt phòng tại homestay này mới có thể gửi đánh giá."
@@ -38,17 +45,37 @@ export const createReview = async (req, res) => {
             }
         }
 
-        const review = await Review.create({
-            userId,
-            hotelId,
-            roomId: roomId || null,
-            bookingId: bookingId || null,
-            rating: numericRating,
-            comment: comment.trim(),
-        });
+        const targetBookingId = bookingId || matchedBooking?.id || null;
+        const targetRoomId = roomId || matchedBooking?.roomId || null;
+
+        // If user already reviewed this specific booking, update it; otherwise create new
+        let review = null;
+        if (targetBookingId) {
+            review = await Review.findOne({
+                where: { userId, bookingId: targetBookingId }
+            });
+        }
+
+        if (review) {
+            review.rating = numericRating;
+            review.comment = comment.trim();
+            await review.save();
+        } else {
+            review = await Review.create({
+                userId,
+                hotelId,
+                roomId: targetRoomId,
+                bookingId: targetBookingId,
+                rating: numericRating,
+                comment: comment.trim(),
+            });
+        }
 
         const populatedReview = await Review.findByPk(review.id, {
-            include: [{ model: User, as: "user", attributes: ["id", "username", "image"] }]
+            include: [
+                { model: User, as: "user", attributes: ["id", "username", "image"] },
+                { model: Room, as: "room", attributes: ["id", "roomType"] },
+            ]
         });
 
         res.json({ success: true, message: "Gửi đánh giá thành công!", review: populatedReview });
@@ -65,7 +92,10 @@ export const getHotelReviews = async (req, res) => {
 
         const reviews = await Review.findAll({
             where: { hotelId },
-            include: [{ model: User, as: "user", attributes: ["id", "username", "image"] }],
+            include: [
+                { model: User, as: "user", attributes: ["id", "username", "image"] },
+                { model: Room, as: "room", attributes: ["id", "roomType"] },
+            ],
             order: [["createdAt", "DESC"]]
         });
 
@@ -81,7 +111,63 @@ export const getHotelReviews = async (req, res) => {
     }
 };
 
-// API to get overall review statistics
+// API for Homestay Owner to view all reviews & stats of their own homestay
+export const getOwnerReviews = async (req, res) => {
+    try {
+        const hotel = await Hotel.findOne({ where: { ownerId: req.user.id } });
+        if (!hotel) {
+            return res.json({
+                success: true,
+                hotel: null,
+                stats: {
+                    totalReviews: 0,
+                    averageRating: 0,
+                    ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+                },
+                reviews: [],
+            });
+        }
+
+        const reviews = await Review.findAll({
+            where: { hotelId: hotel.id },
+            include: [
+                { model: User, as: "user", attributes: ["id", "username", "email", "phone", "image"] },
+                { model: Room, as: "room", attributes: ["id", "roomType"] },
+                { model: Hotel, as: "hotel", attributes: ["id", "name", "city"] },
+            ],
+            order: [["createdAt", "DESC"]],
+        });
+
+        const totalReviews = reviews.length;
+        const averageRating = totalReviews > 0
+            ? (reviews.reduce((acc, item) => acc + item.rating, 0) / totalReviews).toFixed(1)
+            : 0;
+
+        const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        reviews.forEach(r => {
+            const star = Math.round(r.rating);
+            if (ratingBreakdown[star] !== undefined) {
+                ratingBreakdown[star]++;
+            }
+        });
+
+        res.json({
+            success: true,
+            hotel: { id: hotel.id, name: hotel.name, city: hotel.city },
+            stats: {
+                totalReviews,
+                averageRating: Number(averageRating),
+                ratingBreakdown,
+            },
+            reviews,
+        });
+    } catch (error) {
+        console.error("Get owner reviews error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// API to get overall review statistics (Admin)
 export const getReviewStats = async (req, res) => {
     try {
         const reviews = await Review.findAll({
@@ -111,7 +197,7 @@ export const getReviewStats = async (req, res) => {
                 totalReviews,
                 averageRating: Number(averageRating),
                 ratingBreakdown,
-                recentReviews: reviews.slice(0, 10),
+                recentReviews: reviews,
             }
         });
     } catch (error) {
@@ -120,18 +206,27 @@ export const getReviewStats = async (req, res) => {
     }
 };
 
-// API to delete review
+// API to delete review (Allowed for: Review Author, Owner of the Homestay, or Admin)
 export const deleteReview = async (req, res) => {
     try {
         const { id } = req.params;
-        const review = await Review.findByPk(id);
+        const review = await Review.findByPk(id, {
+            include: [{ model: Hotel, as: "hotel" }]
+        });
 
         if (!review) {
             return res.status(404).json({ success: false, message: "Không tìm thấy đánh giá." });
         }
 
-        if (review.userId !== req.user.id && req.user.role !== "admin") {
-            return res.status(403).json({ success: false, message: "Bạn không có quyền xóa đánh giá này." });
+        const isReviewAuthor = review.userId === req.user.id;
+        const isHotelOwner = review.hotel && review.hotel.ownerId === req.user.id;
+        const isAdmin = req.user.role === "admin";
+
+        if (!isReviewAuthor && !isHotelOwner && !isAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền xóa đánh giá này."
+            });
         }
 
         await Review.destroy({ where: { id } });

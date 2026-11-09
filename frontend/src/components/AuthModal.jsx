@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 const AuthModal = ({ isOpen, onClose }) => {
-  const { login, register, sendVerifyCode, toast } = useAppContext();
+  const { login, register, sendVerifyCode, sendResetPasswordCode, resetPassword, toast } = useAppContext();
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [isForgotMode, setIsForgotMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
@@ -30,7 +31,9 @@ const AuthModal = ({ isOpen, onClose }) => {
     }
     setSendingCode(true);
     try {
-      const res = await sendVerifyCode(formData.email, formData.username);
+      const res = isForgotMode
+        ? await sendResetPasswordCode(formData.email)
+        : await sendVerifyCode(formData.email, formData.username);
       if (res.success && res.verifyCode) {
         setGeneratedCode(res.verifyCode);
       }
@@ -44,7 +47,19 @@ const AuthModal = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      if (isLoginMode) {
+      if (isForgotMode) {
+        if (!formData.email || !formData.codeVerify || !formData.password) {
+          toast.error("Vui lòng nhập email, mã xác thực 6 số và mật khẩu mới.");
+          setLoading(false);
+          return;
+        }
+        const res = await resetPassword(formData.email, formData.codeVerify, formData.password);
+        if (res.success) {
+          setIsForgotMode(false);
+          setIsLoginMode(true);
+          setFormData((prev) => ({ ...prev, codeVerify: '', password: '' }));
+        }
+      } else if (isLoginMode) {
         if (!formData.email || !formData.password) {
           toast.error("Vui lòng nhập email và mật khẩu.");
           setLoading(false);
@@ -128,9 +143,12 @@ const AuthModal = ({ isOpen, onClose }) => {
         {/* Header Tabs */}
         <div className="flex border-b border-gray-100 bg-gray-50/70">
           <button
-            onClick={() => setIsLoginMode(true)}
+            onClick={() => {
+              setIsForgotMode(false);
+              setIsLoginMode(true);
+            }}
             className={`flex-1 py-4 text-sm font-semibold transition-all cursor-pointer ${
-              isLoginMode
+              isLoginMode && !isForgotMode
                 ? 'bg-white text-blue-600 border-b-2 border-blue-600 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -138,9 +156,12 @@ const AuthModal = ({ isOpen, onClose }) => {
             Đăng nhập
           </button>
           <button
-            onClick={() => setIsLoginMode(false)}
+            onClick={() => {
+              setIsForgotMode(false);
+              setIsLoginMode(false);
+            }}
             className={`flex-1 py-4 text-sm font-semibold transition-all cursor-pointer ${
-              !isLoginMode
+              !isLoginMode && !isForgotMode
                 ? 'bg-white text-blue-600 border-b-2 border-blue-600 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -153,17 +174,23 @@ const AuthModal = ({ isOpen, onClose }) => {
         <div className="p-6">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-800">
-              {isLoginMode ? 'Chào mừng bạn trở lại!' : 'Tạo tài khoản mới'}
+              {isForgotMode
+                ? 'Khôi phục mật khẩu'
+                : isLoginMode
+                ? 'Chào mừng bạn trở lại!'
+                : 'Tạo tài khoản mới'}
             </h2>
             <p className="text-xs text-gray-500 mt-1">
-              {isLoginMode
+              {isForgotMode
+                ? 'Nhập email để nhận mã xác thực 6 số và đặt mật khẩu mới'
+                : isLoginMode
                 ? 'Đăng nhập để đặt phòng và quản lý homestay của bạn'
                 : 'Trải nghiệm hệ sinh thái đặt homestay chuyên nghiệp'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLoginMode && (
+            {!isLoginMode && !isForgotMode && (
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Họ và tên</label>
                 <input
@@ -192,7 +219,20 @@ const AuthModal = ({ isOpen, onClose }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Mật khẩu</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-gray-700">
+                  {isForgotMode ? 'Mật khẩu mới' : 'Mật khẩu'}
+                </label>
+                {isLoginMode && !isForgotMode && (
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotMode(true)}
+                    className="text-xs text-blue-600 hover:underline font-medium cursor-pointer"
+                  >
+                    Quên mật khẩu?
+                  </button>
+                )}
+              </div>
               <input
                 type="password"
                 name="password"
@@ -204,7 +244,7 @@ const AuthModal = ({ isOpen, onClose }) => {
               />
             </div>
 
-            {!isLoginMode && (
+            {!isLoginMode && !isForgotMode && (
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Số điện thoại liên hệ</label>
                 <input
@@ -218,7 +258,7 @@ const AuthModal = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {!isLoginMode && (
+            {(!isLoginMode || isForgotMode) && (
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Mã xác thực tài khoản <span className="text-red-500">*</span>
@@ -245,7 +285,7 @@ const AuthModal = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {!isLoginMode && (
+            {!isLoginMode && !isForgotMode && (
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Bạn tham gia với tư cách</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -280,8 +320,26 @@ const AuthModal = ({ isOpen, onClose }) => {
               disabled={loading}
               className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5 cursor-pointer disabled:opacity-50"
             >
-              {loading ? 'Đang xử lý...' : (isLoginMode ? 'Đăng nhập ngay' : 'Đăng ký tài khoản')}
+              {loading
+                ? 'Đang xử lý...'
+                : isForgotMode
+                ? 'Đặt lại mật khẩu mới'
+                : isLoginMode
+                ? 'Đăng nhập ngay'
+                : 'Đăng ký tài khoản'}
             </button>
+
+            {isForgotMode && (
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotMode(false)}
+                  className="text-xs text-gray-500 hover:text-gray-800 underline cursor-pointer"
+                >
+                  Quay lại đăng nhập
+                </button>
+              </div>
+            )}
           </form>
 
           {/* Quick Demo Buttons for Evaluators */}

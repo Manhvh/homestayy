@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Title from "../../components/Title";
+import Pagination from "../../components/Pagination";
 import { assets } from "../../assets/assets";
 import { useAppContext } from "../../context/AppContext";
+
+const PAGE_SIZE = 10;
 
 const Dashboard = () => {
   const { currency, user, getToken, toast, axios } = useAppContext();
@@ -21,6 +24,7 @@ const Dashboard = () => {
   const [filterUsername, setFilterUsername] = useState("");
   const [filterPhone, setFilterPhone] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchDashboardData = async () => {
     try {
@@ -139,6 +143,15 @@ const Dashboard = () => {
       return true;
     });
   }, [dashboardData.bookings, filterBookingCode, filterUsername, filterPhone, filterStatus]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterBookingCode, filterUsername, filterPhone, filterStatus]);
+
+  const paginatedBookings = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredBookings.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredBookings, currentPage]);
 
   return (
     <div>
@@ -293,7 +306,7 @@ const Dashboard = () => {
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((item) => (
+                paginatedBookings.map((item) => (
                   <tr key={item.id || item._id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-4">
                       <span className="inline-block font-mono text-xs font-bold bg-gray-100 text-gray-800 px-2.5 py-1 rounded-md border border-gray-200">
@@ -395,6 +408,16 @@ const Dashboard = () => {
             </tbody>
           </table>
         </div>
+        {!loading && filteredBookings.length > 0 && (
+          <div className="px-4 pb-4">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredBookings.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

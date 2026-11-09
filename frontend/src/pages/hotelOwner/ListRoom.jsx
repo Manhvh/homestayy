@@ -1,14 +1,18 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import Pagination from '../../components/Pagination';
 import { assets } from '../../assets/assets';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
+
+const PAGE_SIZE = 10;
 
 const ListRoom = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [currentPage, setCurrentPage] = useState(1);
   const [deletingId, setDeletingId] = useState(null);
 
   // Add Room Modal state
@@ -431,6 +435,15 @@ const ListRoom = () => {
     });
   }, [rooms, filterStatus, searchTerm]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchTerm]);
+
+  const paginatedRooms = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredRooms.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredRooms, currentPage]);
+
   return (
     <div className="w-full space-y-6 pb-12">
       {/* Top Header & Actions */}
@@ -607,7 +620,7 @@ const ListRoom = () => {
                   </td>
                 </tr>
               ) : (
-                filteredRooms.map((item, index) => {
+                paginatedRooms.map((item, index) => {
                   const roomId = item.id || item._id;
                   const amenitiesList = parseAmenities(item.amenities);
                   const isDeleting = deletingId === roomId;
@@ -752,6 +765,16 @@ const ListRoom = () => {
             </tbody>
           </table>
         </div>
+        {!loading && filteredRooms.length > 0 && (
+          <div className="px-4 pb-4">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredRooms.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* ============================================================== */}

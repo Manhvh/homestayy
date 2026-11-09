@@ -8,8 +8,8 @@ const Navbar = () => {
   const navLinks = [
     { name: "Trang chủ", path: "/" },
     { name: "Khách sạn & Phòng", path: "/rooms" },
-    { name: "Trải nghiệm", path: "/Experience" },
-    { name: "Giới thiệu", path: "/About" },
+    { name: "Trải nghiệm", path: "/experience" },
+    { name: "Giới thiệu", path: "/about" },
   ];
 
   const [isScrolled, setIsScrolled] = useState(false);
@@ -77,20 +77,31 @@ const Navbar = () => {
 
       {/* Desktop Nav */}
       <div className="hidden md:flex items-center gap-2 lg:gap-4">
-        {navLinks.map((link, i) => (
-          <a key={i}
-            href={link.path}
-            className={`group relative px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-              isScrolled 
-                ? "text-gray-700 hover:text-blue-600 hover:bg-blue-50" 
-                : "text-white hover:text-blue-200 hover:bg-white/10"
-            }`}>
-            {link.name}
-            <div className={`absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full ${
-              isScrolled ? "bg-blue-600" : "bg-blue-200"
-            }`} />
-          </a>
-        ))}
+        {navLinks.map((link, i) => {
+          const isActive = location.pathname === link.path;
+          return (
+            <Link
+              key={i}
+              to={link.path}
+              className={`group relative px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                isScrolled
+                  ? isActive
+                    ? "text-blue-600 bg-blue-50 font-semibold"
+                    : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+                  : isActive
+                  ? "text-blue-200 bg-white/15 font-semibold"
+                  : "text-white hover:text-blue-200 hover:bg-white/10"
+              }`}
+            >
+              {link.name}
+              <div
+                className={`absolute bottom-0 left-0 h-0.5 transition-all duration-300 ${
+                  isActive ? "w-full" : "w-0 group-hover:w-full"
+                } ${isScrolled ? "bg-blue-600" : "bg-blue-200"}`}
+              />
+            </Link>
+          );
+        })}
         {user && (
           isAdmin ? (
             <button
@@ -265,11 +276,11 @@ const Navbar = () => {
         </button>
 
         {navLinks.map((link, i) => (
-          <a key={i} href={link.path} onClick={() => setIsMenuOpen(false)}
+          <Link key={i} to={link.path} onClick={() => setIsMenuOpen(false)}
             className="group relative px-6 py-3 text-lg font-medium rounded-xl transition-all duration-300 hover:bg-blue-50 hover:text-blue-600">
             {link.name}
             <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-          </a>
+          </Link>
         ))}
 
         {user && (

@@ -1,13 +1,24 @@
 import React, { useEffect, useState } from 'react'
 import { assets } from '../assets/assets'
-import Title from './Title'
+import toast from 'react-hot-toast'
 
 const NewsLetter = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
+
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error('Vui lòng nhập địa chỉ email của bạn.');
+      return;
+    }
+    toast.success('Cảm ơn bạn đã đăng ký nhận thông tin mới nhất từ HomeStay!');
+    setEmail('');
+  };
 
   return (
     <div className="bg-gray-900 py-24">
@@ -24,10 +35,13 @@ const NewsLetter = () => {
         <div className={`w-full max-w-2xl transition-all duration-1000 delay-300 ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
         }`}>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+          <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row items-center justify-center gap-4">
             <div className="relative w-full">
               <input 
-                type="email" 
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="w-full bg-white/10 px-6 py-4 border border-white/20 rounded-xl outline-none text-white placeholder-gray-300 focus:border-white/40 focus:bg-white/15 transition-all duration-300 text-sm" 
                 placeholder="Nhập địa chỉ email của bạn..." 
               />
@@ -37,11 +51,11 @@ const NewsLetter = () => {
                 </svg>
               </div>
             </div>
-            <button className="group flex items-center justify-center gap-3 bg-white text-gray-900 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl whitespace-nowrap cursor-pointer">
+            <button type="submit" className="group flex items-center justify-center gap-3 bg-white text-gray-900 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl whitespace-nowrap cursor-pointer">
               Đăng ký nhận tin
               <img src={assets.arrowIcon} alt="arrow-icon" className='w-4 h-4 group-hover:translate-x-1 transition-all duration-300' />
             </button>
-          </div>
+          </form>
           
           <p className="text-gray-400 mt-6 text-xs text-center leading-relaxed">
             Bằng việc đăng ký, bạn đồng ý với <span className="text-white underline cursor-pointer hover:text-gray-300">Chính sách bảo mật</span> và chấp thuận nhận thông tin cập nhật từ HomeStay.

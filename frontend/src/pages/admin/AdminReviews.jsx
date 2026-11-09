@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Title from '../../components/Title';
+import Pagination from '../../components/Pagination';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
+
+const PAGE_SIZE = 10;
 
 const AdminReviews = () => {
     const { axios, getToken } = useAppContext();
     const [stats, setStats] = useState(null);
     const [reviews, setReviews] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
 
     const fetchReviews = async () => {
@@ -54,6 +58,11 @@ const AdminReviews = () => {
 
     const total = stats?.totalReviews || 0;
     const breakdown = stats?.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+
+    const paginatedReviews = useMemo(() => {
+        const startIndex = (currentPage - 1) * PAGE_SIZE;
+        return reviews.slice(startIndex, startIndex + PAGE_SIZE);
+    }, [reviews, currentPage]);
 
     return (
         <div className="w-full space-y-8">
@@ -107,8 +116,8 @@ const AdminReviews = () => {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {reviews.map((r) => (
-                            <div key={r._id} className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        {paginatedReviews.map((r) => (
+                            <div key={r._id || r.id} className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                                 <div className="space-y-1.5 flex-1">
                                     <div className="flex items-center gap-3">
                                         <img
@@ -132,13 +141,19 @@ const AdminReviews = () => {
                                 </div>
 
                                 <button
-                                    onClick={() => handleDeleteReview(r._id)}
+                                    onClick={() => handleDeleteReview(r._id || r.id)}
                                     className="px-3 py-1 text-xs border border-red-200 text-red-600 hover:bg-red-50 rounded-lg self-end sm:self-start transition font-medium"
                                 >
                                     Xóa đánh giá
                                 </button>
                             </div>
                         ))}
+                        <Pagination
+                            currentPage={currentPage}
+                            totalItems={reviews.length}
+                            pageSize={PAGE_SIZE}
+                            onPageChange={setCurrentPage}
+                        />
                     </div>
                 )}
             </div>

@@ -1,34 +1,36 @@
-import React, { useEffect } from "react";
+import React, { useEffect, lazy, Suspense } from "react";
 import Navbar from "./components/Navbar";
 import { Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import Footer from "./components/Footer";
-import AllRooms from "./pages/AllRooms";
-import RoomDetails from "./pages/RoomDetails";
-import About from "./pages/About";
-import Experience from "./pages/Experience";
-import MyBookings from "./pages/MyBookings";
-import Profile from "./pages/Profile";
 import HotelRegistration from "./components/HotelRegistration";
-import Layout from "./pages/hotelOwner/Layout";
-import Dashboard from "./pages/hotelOwner/Dashboard";
-import AddRoom from "./pages/hotelOwner/AddRoom";
-import ListRoom from "./pages/hotelOwner/ListRoom";
-import ManageHotel from "./pages/hotelOwner/ManageHotel";
-import ScheduleCalendar from "./pages/hotelOwner/ScheduleCalendar";
-import ManageOffers from "./pages/hotelOwner/ManageOffers";
-
-// Admin Pages
-import AdminLayout from "./pages/admin/Layout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminHotels from "./pages/admin/AdminHotels";
-import AdminCategories from "./pages/admin/AdminCategories";
-import AdminReviews from "./pages/admin/AdminReviews";
-
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast, useToasterStore } from "react-hot-toast";
 import { useAppContext } from "./context/AppContext";
 import Loader from "./components/Loader";
+
+// Lazy-loaded Customer Pages
+const AllRooms = lazy(() => import("./pages/AllRooms"));
+const RoomDetails = lazy(() => import("./pages/RoomDetails"));
+const About = lazy(() => import("./pages/About"));
+const Experience = lazy(() => import("./pages/Experience"));
+const MyBookings = lazy(() => import("./pages/MyBookings"));
+const Profile = lazy(() => import("./pages/Profile"));
+
+// Lazy-loaded Hotel Owner Pages
+const Layout = lazy(() => import("./pages/hotelOwner/Layout"));
+const Dashboard = lazy(() => import("./pages/hotelOwner/Dashboard"));
+const ListRoom = lazy(() => import("./pages/hotelOwner/ListRoom"));
+const ManageHotel = lazy(() => import("./pages/hotelOwner/ManageHotel"));
+const ScheduleCalendar = lazy(() => import("./pages/hotelOwner/ScheduleCalendar"));
+const OwnerReviews = lazy(() => import("./pages/hotelOwner/OwnerReviews"));
+
+// Lazy-loaded Admin Pages
+const AdminLayout = lazy(() => import("./pages/admin/Layout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminHotels = lazy(() => import("./pages/admin/AdminHotels"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 
 const App = () => {
   const navigate = useNavigate();
@@ -37,6 +39,15 @@ const App = () => {
   const isOwnerPath = pathname.includes("owner");
   const isAdminPath = pathname.includes("admin");
   const { showHotelRegistration, isAdmin } = useAppContext();
+  const { toasts } = useToasterStore();
+
+  // Enforce a strict maximum of 1 visible toast at any time
+  useEffect(() => {
+    toasts
+      .filter((t) => t.visible)
+      .filter((_, index) => index >= 1)
+      .forEach((t) => toast.dismiss(t.id));
+  }, [toasts]);
 
   useEffect(() => {
     // Admin accounts do not access client pages: redirect straight to admin dashboard
@@ -51,6 +62,14 @@ const App = () => {
       {!isOwnerPath && !isAdminPath && <Navbar />}
       {showHotelRegistration && <HotelRegistration />}
       <div className="min-h-[70vh]">
+        <Suspense
+          fallback={
+            <div className="flex flex-col items-center justify-center min-h-[60vh]">
+              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-gray-500 mt-3 font-medium">Đang tải trang...</p>
+            </div>
+          }
+        >
         <Routes>
           {/* Customer Routes */}
           <Route path="/" element={<Home />} />
@@ -69,7 +88,7 @@ const App = () => {
             <Route path="manage-hotel" element={<ManageHotel />} />
             <Route path="add-room" element={<Navigate to="/owner-dashboard/list-room" replace />} />
             <Route path="list-room" element={<ListRoom />} />
-            <Route path="offers" element={<ManageOffers />} />
+            <Route path="reviews" element={<OwnerReviews />} />
           </Route>
 
           {/* Admin Routes */}
@@ -81,6 +100,7 @@ const App = () => {
             <Route path="reviews" element={<AdminReviews />} />
           </Route>
         </Routes>
+        </Suspense>
       </div>
       {!isOwnerPath && !isAdminPath && <Footer />}
     </div>

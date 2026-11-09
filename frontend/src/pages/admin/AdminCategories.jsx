@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Title from '../../components/Title';
+import Pagination from '../../components/Pagination';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
+
+const PAGE_SIZE = 10;
 
 const AdminCategories = () => {
     const { axios, getToken, fetchCategories: refreshGlobalCategories } = useAppContext();
     const [activeTab, setActiveTab] = useState('amenity');
     const [amenities, setAmenities] = useState([]);
     const [cities, setCities] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
 
     // Form inputs for new item
@@ -89,6 +93,15 @@ const AdminCategories = () => {
 
     const currentList = activeTab === 'amenity' ? amenities : cities;
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab]);
+
+    const paginatedList = useMemo(() => {
+        const startIndex = (currentPage - 1) * PAGE_SIZE;
+        return currentList.slice(startIndex, startIndex + PAGE_SIZE);
+    }, [currentList, currentPage]);
+
     return (
         <div className="w-full space-y-6">
             <Title
@@ -160,23 +173,31 @@ const AdminCategories = () => {
             {loading ? (
                 <div className="py-12 text-gray-500">Đang tải danh mục...</div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {currentList.map((item) => (
-                        <div key={item._id} className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-                            <div>
-                                <p className="font-bold text-gray-900 text-sm">{item.name}</p>
-                                <p className="text-xs text-gray-500 line-clamp-1">{item.description || "Không có mô tả"}</p>
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {paginatedList.map((item) => (
+                            <div key={item._id} className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+                                <div>
+                                    <p className="font-bold text-gray-900 text-sm">{item.name}</p>
+                                    <p className="text-xs text-gray-500 line-clamp-1">{item.description || "Không có mô tả"}</p>
+                                </div>
+                                <button
+                                    onClick={() => handleDelete(item._id)}
+                                    title="Xóa danh mục"
+                                    className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition"
+                                >
+                                    ✕
+                                </button>
                             </div>
-                            <button
-                                onClick={() => handleDelete(item._id)}
-                                title="Xóa danh mục"
-                                className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={currentList.length}
+                        pageSize={PAGE_SIZE}
+                        onPageChange={setCurrentPage}
+                    />
+                </>
             )}
         </div>
     );

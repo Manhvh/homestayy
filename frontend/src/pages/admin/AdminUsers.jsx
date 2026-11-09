@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Title from '../../components/Title';
+import Pagination from '../../components/Pagination';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
+
+const PAGE_SIZE = 10;
 
 const AdminUsers = () => {
     const { axios, getToken } = useAppContext();
     const [users, setUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
 
     const fetchUsers = async () => {
@@ -65,10 +69,19 @@ const AdminUsers = () => {
         fetchUsers();
     }, []);
 
-    const filteredUsers = users.filter(u =>
+    const filteredUsers = useMemo(() => users.filter(u =>
         u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    ), [users, searchTerm]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    const paginatedUsers = useMemo(() => {
+        const startIndex = (currentPage - 1) * PAGE_SIZE;
+        return filteredUsers.slice(startIndex, startIndex + PAGE_SIZE);
+    }, [filteredUsers, currentPage]);
 
     return (
         <div className="w-full space-y-6">
@@ -110,7 +123,7 @@ const AdminUsers = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {filteredUsers.map((user) => (
+                                {paginatedUsers.map((user) => (
                                     <tr key={user._id} className="hover:bg-gray-50 transition-colors">
                                         <td className="py-3 px-4">
                                             <div className="flex items-center gap-3">
@@ -178,6 +191,16 @@ const AdminUsers = () => {
                             </tbody>
                         </table>
                     </div>
+                    {filteredUsers.length > 0 && (
+                        <div className="px-4 pb-4">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalItems={filteredUsers.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
         </div>

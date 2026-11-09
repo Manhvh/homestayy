@@ -1,15 +1,6 @@
 import { Op } from "sequelize";
 import transporter from '../configs/nodemailer.js';
-import { Booking, Hotel, Room, User, Offer, sequelize } from "../models/index.js";
-
-// Helper to check if an offer expiryDate (YYYY-MM-DD) has passed
-const isOfferExpired = (expiryDate) => {
-    if (!expiryDate) return false;
-    const exp = new Date(expiryDate);
-    if (isNaN(exp.getTime())) return false;
-    exp.setHours(23, 59, 59, 999);
-    return exp < new Date();
-};
+import { Booking, Hotel, Room, User, Review, sequelize } from "../models/index.js";
 
 // Function to check availability of the room
 const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
@@ -55,85 +46,9 @@ export const checkAvailabilityAPI = async (req, res) => {
     }
 };
 
-// Predefined valid exclusive offer coupons
-export const VALID_COUPONS = {
-    SUMMER25: { code: "SUMMER25", percent: 25, maxDiscount: 500000, minNights: 2, expiryDate: "2027-08-31", title: "Gói Nghỉ Dưỡng Mùa Hè" },
-    ROMANCE20: { code: "ROMANCE20", percent: 20, maxDiscount: 400000, minNights: 1, expiryDate: "2027-09-20", title: "Kỳ Nghỉ Lãng Mạn Cặp Đôi" },
-    EARLYBIRD30: { code: "EARLYBIRD30", percent: 30, maxDiscount: 600000, minNights: 1, minDaysAhead: 14, expiryDate: "2027-09-25", title: "Ưu Đãi Đặt Sớm Homestay" },
-    WEEKEND15: { code: "WEEKEND15", percent: 15, maxDiscount: 300000, minNights: 1, expiryDate: "2027-10-31", title: "Cuối Tuần Thảnh Thơi" },
-    WELCOME10: { code: "WELCOME10", percent: 10, maxDiscount: 200000, minNights: 1, expiryDate: "2027-12-31", title: "Chào Mừng Khách Hàng Mới" },
-    LONGSTAY25: { code: "LONGSTAY25", percent: 25, maxDiscount: 800000, minNights: 4, expiryDate: "2027-11-15", title: "Lưu Trú Dài Ngày Siêu Tiết Kiệm" },
-};
-
-// API to validate a coupon code
-export const validateCouponAPI = async (req, res) => {
-    try {
-        const { couponCode, subtotal, nights } = req.body;
-        if (!couponCode) {
-            return res.status(400).json({ success: false, message: "Vui lòng nhập mã ưu đãi!" });
-        }
-        const cleanCode = couponCode.trim().toUpperCase();
-
-        // 1. Try finding in database Offer table
-        let couponData = null;
-        const dbOffer = await Offer.findOne({ where: { code: cleanCode, isActive: true } });
-        if (dbOffer) {
-            couponData = {
-                code: dbOffer.code,
-                percent: dbOffer.priceOff,
-                maxDiscount: dbOffer.maxDiscount,
-                minNights: dbOffer.minNights || 1,
-                expiryDate: dbOffer.expiryDate,
-                title: dbOffer.title,
-            };
-        } else if (VALID_COUPONS[cleanCode]) {
-            couponData = VALID_COUPONS[cleanCode];
-        }
-
-        if (!couponData) {
-            return res.status(400).json({ success: false, message: "Mã ưu đãi không tồn tại hoặc đã ngừng áp dụng!" });
-        }
-
-        if (isOfferExpired(couponData.expiryDate)) {
-            return res.status(400).json({ success: false, message: "Mã ưu đãi này đã hết hạn sử dụng!" });
-        }
-
-        const requiredNights = Number(couponData.minNights) || 1;
-        if (nights !== undefined && nights !== null && Number(nights) < requiredNights) {
-            return res.status(400).json({
-                success: false,
-                message: `Mã ưu đãi ${couponData.code} yêu cầu đặt tối thiểu ${requiredNights} đêm!`
-            });
-        }
-
-        const price = Number(subtotal) || 0;
-        let rawDiscount = (price * couponData.percent) / 100;
-        if (couponData.maxDiscount) {
-            rawDiscount = Math.min(rawDiscount, couponData.maxDiscount);
-        }
-        const discountAmount = Math.round(rawDiscount);
-        const finalTotal = Math.max(0, price - discountAmount);
-
-        res.json({
-            success: true,
-            coupon: {
-                code: couponData.code,
-                title: couponData.title,
-                percent: couponData.percent,
-                minNights: requiredNights,
-                discountAmount,
-                finalTotal,
-            },
-            message: `Áp dụng thành công mã ${couponData.code} (Giảm ${couponData.percent}%)`
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
-
 // API to create a new booking
 export const createBookings = async (req, res) => {
-    const { room, checkInDate, checkOutDate, guests, paymentMethod, couponCode } = req.body;
+    const { room, checkInDate, checkOutDate, guests, paymentMethod } = req.body;
     const userId = req.user.id;
 
     if (!room || !checkInDate || !checkOutDate) {
@@ -243,52 +158,6 @@ export const createBookings = async (req, res) => {
             cur.setDate(cur.getDate() + 1);
         }
 
-        let discountAmount = 0;
-        let appliedCouponCode = null;
-        if (couponCode && typeof couponCode === "string" && couponCode.trim() !== "") {
-            const cleanCode = couponCode.trim().toUpperCase();
-            let couponData = null;
-            const dbOffer = await Offer.findOne({ where: { code: cleanCode, isActive: true }, transaction: t });
-            if (dbOffer) {
-                couponData = {
-                    code: dbOffer.code,
-                    percent: dbOffer.priceOff,
-                    maxDiscount: dbOffer.maxDiscount,
-                    minNights: dbOffer.minNights || 1,
-                    expiryDate: dbOffer.expiryDate,
-                };
-            } else if (VALID_COUPONS[cleanCode]) {
-                couponData = VALID_COUPONS[cleanCode];
-            }
-
-            if (!couponData) {
-                await t.rollback();
-                return res.status(400).json({ success: false, message: "Mã ưu đãi không tồn tại hoặc đã ngừng áp dụng!" });
-            }
-
-            if (isOfferExpired(couponData.expiryDate)) {
-                await t.rollback();
-                return res.status(400).json({ success: false, message: "Mã ưu đãi này đã hết hạn sử dụng!" });
-            }
-
-            const requiredNights = Number(couponData.minNights) || 1;
-            if (totalNights < requiredNights) {
-                await t.rollback();
-                return res.status(400).json({
-                    success: false,
-                    message: `Mã ưu đãi ${couponData.code} yêu cầu đặt tối thiểu ${requiredNights} đêm!`
-                });
-            }
-
-            let rawDiscount = (totalPrice * couponData.percent) / 100;
-            if (couponData.maxDiscount) {
-                rawDiscount = Math.min(rawDiscount, couponData.maxDiscount);
-            }
-            discountAmount = Math.round(rawDiscount);
-            appliedCouponCode = couponData.code;
-            totalPrice = Math.max(0, totalPrice - discountAmount);
-        }
-
         let bookingCode = Math.random().toString(36).substring(2, 10);
 
         const booking = await Booking.create({
@@ -299,8 +168,6 @@ export const createBookings = async (req, res) => {
             checkInDate,
             checkOutDate,
             totalPrice,
-            couponCode: appliedCouponCode,
-            discountAmount,
             status: "pending",
             paymentMethod: paymentMethod || "Pay At Hotel",
             isSendMail: false,
@@ -359,16 +226,38 @@ export const createBookings = async (req, res) => {
 export const getUserBookings = async (req, res) => {
     try {
         const userId = req.user.id;
-        const bookings = await Booking.findAll({
-            where: { userId },
-            include: [
-                { model: Room, as: "room" },
-                { model: Hotel, as: "hotel" }
-            ],
-            order: [["createdAt", "DESC"]]
+        const [bookings, userReviews] = await Promise.all([
+            Booking.findAll({
+                where: { userId },
+                include: [
+                    { model: Room, as: "room" },
+                    { model: Hotel, as: "hotel" },
+                    { model: Review, as: "review" }
+                ],
+                order: [["createdAt", "DESC"]]
+            }),
+            Review.findAll({
+                where: { userId },
+                order: [["createdAt", "DESC"]]
+            })
+        ]);
+
+        const bookingsWithReview = bookings.map((b) => {
+            const plain = b.toJSON();
+            if (!plain.review) {
+                const matched = userReviews.find(
+                    (r) =>
+                        (r.bookingId && Number(r.bookingId) === Number(plain.id)) ||
+                        (!r.bookingId && Number(r.hotelId) === Number(plain.hotelId))
+                );
+                if (matched) {
+                    plain.review = matched.toJSON();
+                }
+            }
+            return plain;
         });
 
-        res.json({ success: true, bookings });
+        res.json({ success: true, bookings: bookingsWithReview });
 
     } catch (error) {
         console.error("Get user bookings error:", error);

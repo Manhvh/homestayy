@@ -13,7 +13,6 @@ import bookingRouter from './routes/bookingRoutes.js';
 import reviewRouter from './routes/reviewRoutes.js';
 import categoryRouter from './routes/categoryRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
-import offerRouter from './routes/offerRoutes.js';
 
 // Connect to MySQL, synchronize tables, auto-seed if empty, and verify Nodemailer SMTP connection
 const initServer = async () => {
@@ -61,7 +60,6 @@ app.use('/api/bookings', bookingRouter);
 app.use('/api/reviews', reviewRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/admin', adminRouter);
-app.use('/api/offers', offerRouter);
 
 const PORT = process.env.PORT || 4000;
 

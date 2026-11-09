@@ -192,3 +192,143 @@ export const getMe = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// POST /api/auth/forgot-password
+export const sendResetCode = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email || !email.trim()) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập địa chỉ email tài khoản." });
+        }
+
+        const cleanEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ where: { email: cleanEmail } });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy tài khoản với địa chỉ email này." });
+        }
+
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const expiresAt = Date.now() + 10 * 60 * 1000;
+        pendingVerifyCodes.set(`reset_${cleanEmail}`, { code, expiresAt });
+
+        user.codeVerify = code;
+        await user.save();
+
+        let mailSent = false;
+        if (process.env.SENDER_EMAIL && process.env.SMTP_USER && process.env.SMTP_PASS) {
+            try {
+                await transporter.sendMail({
+                    from: process.env.SENDER_EMAIL,
+                    to: cleanEmail,
+                    subject: 'HomeStay - Mã xác thực đặt lại mật khẩu',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 500px; margin: auto; border: 1px solid #e5e7eb; border-radius: 12px;">
+                            <h2 style="color: #1d4ed8; margin-top: 0;">Đặt lại mật khẩu HomeStay</h2>
+                            <p>Xin chào <strong>${user.username || cleanEmail}</strong>,</p>
+                            <p>Mã xác thực để đặt lại mật khẩu tài khoản của bạn là:</p>
+                            <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e40af; background: #eff6ff; padding: 14px 20px; text-align: center; border-radius: 8px; margin: 16px 0;">
+                                ${code}
+                            </div>
+                            <p style="font-size: 12px; color: #6b7280;">Mã có hiệu lực trong vòng 10 phút.</p>
+                        </div>
+                    `,
+                });
+                mailSent = true;
+            } catch (mailError) {
+                console.warn("Send reset password email skipped:", mailError.message);
+            }
+        }
+
+        res.json({
+            success: true,
+            mailSent,
+            verifyCode: code,
+            message: mailSent
+                ? `Đã gửi mã đặt lại mật khẩu tới email ${cleanEmail}!`
+                : `Mã xác thực đặt lại mật khẩu của bạn là: ${code}`,
+        });
+    } catch (error) {
+        console.error("Send reset code error:", error);
+        res.status(500).json({ success: false, message: error.message || "Lỗi gửi mã đặt lại mật khẩu." });
+    }
+};
+
+// POST /api/auth/reset-password
+export const resetPassword = async (req, res) => {
+    try {
+        const { email, codeVerify, newPassword } = req.body;
+        if (!email || !codeVerify || !newPassword) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ email, mã xác thực và mật khẩu mới." });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
+        }
+
+        const cleanEmail = email.toLowerCase().trim();
+        const cleanCode = String(codeVerify).trim();
+
+        const user = await User.findOne({ where: { email: cleanEmail } });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy tài khoản với email này." });
+        }
+
+        const pending = pendingVerifyCodes.get(`reset_${cleanEmail}`);
+        const isCodeValid =
+            (pending && pending.expiresAt >= Date.now() && pending.code === cleanCode) ||
+            (user.codeVerify && String(user.codeVerify).trim() === cleanCode);
+
+        if (!isCodeValid) {
+            return res.status(400).json({ success: false, message: "Mã xác thực không chính xác hoặc đã hết hạn." });
+        }
+
+        pendingVerifyCodes.delete(`reset_${cleanEmail}`);
+        user.password = hashPassword(newPassword);
+        user.codeVerify = cleanCode;
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.",
+        });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        res.status(500).json({ success: false, message: error.message || "Lỗi đặt lại mật khẩu." });
+    }
+};
+
+// PUT /api/auth/change-password
+export const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: "Mật khẩu mới phải chứa ít nhất 6 ký tự." });
+        }
+
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy người dùng." });
+        }
+
+        if (user.password) {
+            if (!currentPassword) {
+                return res.status(400).json({ success: false, message: "Vui lòng nhập mật khẩu hiện tại." });
+            }
+            const isMatch = verifyPassword(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ success: false, message: "Mật khẩu hiện tại không chính xác." });
+            }
+        }
+
+        user.password = hashPassword(newPassword);
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Đổi mật khẩu thành công!",
+        });
+    } catch (error) {
+        console.error("Change password error:", error);
+        res.status(500).json({ success: false, message: error.message || "Lỗi đổi mật khẩu." });
+    }
+};

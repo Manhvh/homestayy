@@ -5,7 +5,6 @@ import Room from "./Room.js";
 import Booking from "./Booking.js";
 import Review from "./Review.js";
 import Category from "./Category.js";
-import Offer from "./Offer.js";
 
 // Define Associations
 
@@ -41,13 +40,9 @@ Review.belongsTo(Hotel, { foreignKey: "hotelId", as: "hotel" });
 Room.hasMany(Review, { foreignKey: "roomId", as: "reviews", onDelete: "SET NULL" });
 Review.belongsTo(Room, { foreignKey: "roomId", as: "room" });
 
-// Hotel <-> Offer
-Hotel.hasMany(Offer, { foreignKey: "hotelId", as: "offers", onDelete: "CASCADE" });
-Offer.belongsTo(Hotel, { foreignKey: "hotelId", as: "hotel" });
-
-// User <-> Offer
-User.hasMany(Offer, { foreignKey: "ownerId", as: "offers", onDelete: "CASCADE" });
-Offer.belongsTo(User, { foreignKey: "ownerId", as: "owner" });
+// Booking <-> Review
+Booking.hasOne(Review, { foreignKey: "bookingId", as: "review", onDelete: "SET NULL" });
+Review.belongsTo(Booking, { foreignKey: "bookingId", as: "booking" });
 
 // Function to synchronize tables with MySQL
 export const syncDatabase = async () => {
@@ -67,5 +62,4 @@ export {
     Booking,
     Review,
     Category,
-    Offer,
 };

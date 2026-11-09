@@ -1,14 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets.js";
+import { useAppContext } from "../context/AppContext.jsx";
 
 const Experience = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [realReviews, setRealReviews] = useState([]);
   const navigate = useNavigate();
+  const { axios } = useAppContext();
 
   useEffect(() => {
     setIsVisible(true);
-  }, []);
+    const fetchPublicReviews = async () => {
+      try {
+        const { data } = await axios.get("/api/reviews/stats");
+        if (data.success && Array.isArray(data.stats?.recentReviews)) {
+          setRealReviews(data.stats.recentReviews.filter((r) => r.rating >= 4).slice(0, 6));
+        }
+      } catch {
+        // Fallback to static testimonials if API fails
+      }
+    };
+    fetchPublicReviews();
+  }, [axios]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -59,6 +73,50 @@ const Experience = () => {
 
           {/* Testimonials Grid */}
           <div className={`grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16 transition-all duration-1000 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+            {realReviews.length > 0 ? (
+              realReviews.map((rev) => (
+                <div
+                  key={rev.id || rev._id}
+                  className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center mb-5">
+                      <img
+                        src={rev.user?.image || assets.userIcon}
+                        alt={rev.user?.username || "Du khách"}
+                        className="w-14 h-14 rounded-full mr-4 object-cover border border-gray-200"
+                      />
+                      <div>
+                        <h4 className="text-gray-900 font-semibold text-base">
+                          {rev.user?.username || "Khách du lịch"}
+                        </h4>
+                        <p className="text-blue-600 text-xs font-medium mt-0.5">
+                          {rev.hotel?.name || "Homestay"}
+                          {rev.hotel?.city ? ` • ${rev.hotel.city}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex mb-3">
+                      {[...Array(5)].map((_, i) => (
+                        <img
+                          key={i}
+                          src={i < rev.rating ? assets.starIconFilled : assets.starIconOutlined}
+                          alt="star"
+                          className="w-4.5 h-4.5"
+                        />
+                      ))}
+                    </div>
+                    <p className="text-gray-700 leading-relaxed text-sm italic">
+                      "{rev.comment}"
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-4 pt-3 border-t border-gray-100">
+                    Đánh giá ngày {new Date(rev.createdAt).toLocaleDateString("vi-VN")}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <>
             {/* User Testimonials */}
             <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
               <div className="flex items-center mb-6">
@@ -167,6 +225,8 @@ const Experience = () => {
                 "Giao diện trực quan, lọc giá và tiện ích rất thông minh. Tôi tìm được phòng ưng ý chỉ trong chưa đầy 3 phút. Rất hài lòng với dịch vụ."
               </p>
             </div>
+              </>
+            )}
           </div>
 
           {/* Call to Action */}

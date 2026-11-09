@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Title from '../../components/Title';
+import Pagination from '../../components/Pagination';
 import { useAppContext } from '../../context/AppContext';
 import { assets } from '../../assets/assets';
 import toast from 'react-hot-toast';
+
+const PAGE_SIZE = 10;
 
 const AdminHotels = () => {
     const { axios, getToken } = useAppContext();
     const [hotels, setHotels] = useState([]);
     const [filterStatus, setFilterStatus] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
 
     const fetchHotels = async () => {
@@ -49,10 +53,19 @@ const AdminHotels = () => {
         fetchHotels();
     }, []);
 
-    const filteredHotels = hotels.filter(h => {
+    const filteredHotels = useMemo(() => hotels.filter(h => {
         if (filterStatus === 'all') return true;
         return h.status === filterStatus;
-    });
+    }), [hotels, filterStatus]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterStatus]);
+
+    const paginatedHotels = useMemo(() => {
+        const startIndex = (currentPage - 1) * PAGE_SIZE;
+        return filteredHotels.slice(startIndex, startIndex + PAGE_SIZE);
+    }, [filteredHotels, currentPage]);
 
     return (
         <div className="w-full space-y-6">
@@ -106,7 +119,7 @@ const AdminHotels = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {filteredHotels.map((hotel) => (
+                                {paginatedHotels.map((hotel) => (
                                     <tr key={hotel._id || hotel.id} className="hover:bg-gray-50/70 transition-colors">
                                         <td className="py-4 px-6 min-w-[280px]">
                                             <div className="flex items-center gap-3.5">
@@ -208,6 +221,16 @@ const AdminHotels = () => {
                             </tbody>
                         </table>
                     </div>
+                    {filteredHotels.length > 0 && (
+                        <div className="px-6 pb-4">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalItems={filteredHotels.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
         </div>

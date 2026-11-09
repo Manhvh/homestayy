@@ -3,8 +3,14 @@ import Title from '../components/Title';
 import { useAppContext } from '../context/AppContext';
 
 const Profile = () => {
-  const { user, updateUserProfile, toast } = useAppContext();
+  const { user, updateUserProfile, changePassword, toast } = useAppContext();
   const [loading, setLoading] = useState(false);
+  const [changingPass, setChangingPass] = useState(false);
+  const [passData, setPassData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
   const [formData, setFormData] = useState({
     username: '',
     phone: '',
@@ -82,6 +88,27 @@ const Profile = () => {
       await updateUserProfile(payload);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (!passData.newPassword || passData.newPassword.length < 6) {
+      toast.error('Mật khẩu mới phải chứa ít nhất 6 ký tự.');
+      return;
+    }
+    if (passData.newPassword !== passData.confirmPassword) {
+      toast.error('Xác nhận mật khẩu mới không khớp.');
+      return;
+    }
+    setChangingPass(true);
+    try {
+      const res = await changePassword(passData.currentPassword, passData.newPassword);
+      if (res.success) {
+        setPassData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      }
+    } finally {
+      setChangingPass(false);
     }
   };
 
@@ -212,6 +239,72 @@ const Profile = () => {
               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Change Password Card */}
+      <div className="mt-8 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <form onSubmit={handlePasswordChange} className="p-6 sm:p-8 space-y-5">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Đổi mật khẩu bảo mật</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Cập nhật mật khẩu định kỳ để bảo vệ an toàn cho tài khoản của bạn.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Mật khẩu hiện tại
+              </label>
+              <input
+                type="password"
+                required
+                value={passData.currentPassword}
+                onChange={(e) => setPassData({ ...passData, currentPassword: e.target.value })}
+                placeholder="Nhập mật khẩu cũ"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Mật khẩu mới <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={passData.newPassword}
+                onChange={(e) => setPassData({ ...passData, newPassword: e.target.value })}
+                placeholder="Ít nhất 6 ký tự"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Xác nhận mật khẩu mới <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={passData.confirmPassword}
+                onChange={(e) => setPassData({ ...passData, confirmPassword: e.target.value })}
+                placeholder="Nhập lại mật khẩu mới"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+              />
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-gray-100 flex justify-end">
+            <button
+              type="submit"
+              disabled={changingPass}
+              className="px-6 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
+            >
+              {changingPass ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
             </button>
           </div>
         </form>

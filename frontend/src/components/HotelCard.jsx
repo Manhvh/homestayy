@@ -4,10 +4,13 @@ import { assets } from '../assets/assets'
 import { useAppContext } from '../context/AppContext'
 
 const HotelCard = ({room, index}) => {
-  const { currency } = useAppContext();
+  const { currency, isFavoriteRoom, toggleFavoriteRoom } = useAppContext();
   const roomId = room.id || room._id;
   const hotel = room.hotel || {};
   const images = Array.isArray(room.images) && room.images.length > 0 ? room.images : [assets.roomImg1];
+  const isFav = isFavoriteRoom(roomId);
+  const avgRating = room.averageRating ? Number(room.averageRating).toFixed(1) : "5.0";
+  const revCount = room.reviewCount ?? (room.reviews?.length || 0);
 
   return (
     <Link to={'/rooms/' + roomId} onClick={() => scrollTo(0, 0)} key={roomId} 
@@ -23,11 +26,28 @@ const HotelCard = ({room, index}) => {
             
             {/* Heart icon in top-right */}
             <div className='absolute top-4 right-4'>
-              <div className='w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-all duration-200'>
-                <svg className="w-4 h-4 text-gray-600 hover:text-red-500 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button
+                type="button"
+                onClick={(e) => toggleFavoriteRoom(roomId, e)}
+                title={isFav ? "Bỏ yêu thích" : "Lưu phòng yêu thích"}
+                className='w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-all duration-200 cursor-pointer'
+              >
+                <svg className={`w-4 h-4 transition-colors duration-200 ${isFav ? "text-red-500 fill-red-500" : "text-gray-600 hover:text-red-500"}`} fill={isFav ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
-              </div>
+              </button>
+            </div>
+
+            {/* Host Avatar Badge in bottom-left */}
+            <div className="absolute bottom-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-xs text-white pl-1 pr-2.5 py-1 rounded-full">
+              <img
+                src={hotel.owner?.image || assets.userIcon}
+                alt="Host"
+                className="w-6 h-6 rounded-full object-cover border border-white"
+              />
+              <span className="text-[11px] font-medium truncate max-w-[130px]">
+                Chủ nhà: {hotel.owner?.username || "Chủ nhà"}
+              </span>
             </div>
           </div>
 
@@ -62,12 +82,14 @@ const HotelCard = ({room, index}) => {
             <div className='flex items-center gap-1'>
               <div className='flex items-center gap-1'>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <svg key={star} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <svg key={star} className={`w-4 h-4 ${star <= Math.round(Number(avgRating)) ? "text-yellow-400" : "text-gray-300"}`} fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 ))}
               </div>
-              <span className="text-sm text-gray-500 ml-1">({room.reviews?.length || 12} đánh giá)</span>
+              <span className="text-sm text-gray-500 ml-1">
+                {avgRating} ({revCount > 0 ? `${revCount} đánh giá` : "Mới"})
+              </span>
             </div>
           </div>
         </div>
@@ -81,18 +103,34 @@ const HotelCard = ({room, index}) => {
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
             
-            {/* Simple badge */}
-            {index % 2 === 0 && 
-            <div className='absolute top-3 left-3'>
-              <span className='px-3 py-1 text-xs bg-white text-gray-800 font-medium rounded-full shadow-sm border border-gray-200'>
-                Yêu thích
-              </span>
-            </div>}
+            {/* Favorite button in top-left */}
+            <button
+              type="button"
+              onClick={(e) => toggleFavoriteRoom(roomId, e)}
+              title={isFav ? "Bỏ yêu thích" : "Lưu phòng yêu thích"}
+              className='absolute top-3 left-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm border border-gray-200 hover:bg-white transition-all cursor-pointer'
+            >
+              <svg className={`w-4 h-4 transition-colors duration-200 ${isFav ? "text-red-500 fill-red-500" : "text-gray-600 hover:text-red-500"}`} fill={isFav ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
             
             {/* Price badge */}
             <div className='absolute top-3 right-3'>
               <span className='px-3 py-1 text-sm bg-white text-gray-800 font-semibold rounded-lg shadow-sm border border-gray-200'>
                 {Number(room.pricePerNight).toLocaleString('vi-VN')} {currency}
+              </span>
+            </div>
+
+            {/* Host Avatar Badge in bottom-left */}
+            <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 bg-black/65 backdrop-blur-xs text-white pl-1 pr-2.5 py-0.5 rounded-full shadow-xs">
+              <img
+                src={hotel.owner?.image || assets.userIcon}
+                alt="Host"
+                className="w-5 h-5 rounded-full object-cover border border-white"
+              />
+              <span className="text-[11px] font-medium truncate max-w-[140px]">
+                {hotel.owner?.username || "Chủ nhà HomeStay"}
               </span>
             </div>
           </div>
@@ -112,7 +150,10 @@ const HotelCard = ({room, index}) => {
                     </div>
                     <div className='flex items-center gap-1 flex-shrink-0 ml-2'>
                         <img src={assets.starIconFilled} alt="starIcon" className="w-4 h-4"/>
-                        <span className="text-sm font-medium text-gray-700">4.8</span>
+                        <span className="text-sm font-medium text-gray-700">{avgRating}</span>
+                        {revCount > 0 && (
+                          <span className="text-xs text-gray-400">({revCount})</span>
+                        )}
                     </div>
                 </div>
 

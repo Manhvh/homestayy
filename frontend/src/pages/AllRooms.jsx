@@ -2,7 +2,10 @@ import React, { useMemo, useState, useEffect } from "react";
 import { assets, facilityIcons } from "../assets/assets";
 import { useSearchParams } from "react-router-dom";
 import StarRating from "../components/StarRating";
+import Pagination from "../components/Pagination";
 import { useAppContext } from "../context/AppContext";
+
+const PAGE_SIZE = 10;
 
 const CheckBox = ({ label, selected = false, onChange = () => { } }) => {
   return (
@@ -34,7 +37,7 @@ const RadioButton = ({ label, selected = false, onChange = () => { } }) => {
 };
 
 const AllRooms = () => {
-  const { rooms, navigate, currency, fetchRooms, amenities: dynamicAmenities } = useAppContext();
+  const { rooms, navigate, currency, fetchRooms, amenities: dynamicAmenities, favoriteRoomIds, isFavoriteRoom, toggleFavoriteRoom } = useAppContext();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Read URL query params
@@ -70,13 +73,21 @@ const AllRooms = () => {
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE_LIMIT);
 
   const [selectedSort, setSelectedSort] = useState('');
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const roomTypes = [
-    { label: "Phòng đơn", value: "Phòng đơn" },
-    { label: "Phòng đôi", value: "Phòng đôi" },
-    { label: "Phòng cao cấp", value: "Phòng cao cấp" },
-    { label: "Căn hộ gia đình", value: "Căn hộ gia đình" }
-  ];
+  const roomTypes = useMemo(() => {
+    const baseTypes = ["Phòng đơn", "Phòng đôi", "Villa", "Bungalow", "Căn hộ gia đình"];
+    const dynamicTypes = Array.from(
+      new Set(
+        (rooms || [])
+          .map((r) => r.roomType?.trim())
+          .filter(Boolean)
+      )
+    );
+    const merged = dynamicTypes.length > 0 ? dynamicTypes : baseTypes;
+    return merged.map((t) => ({ label: t, value: t }));
+  }, [rooms]);
 
   const sortOptions = [
     { label: "Giá: Thấp đến Cao", value: "price_asc" },
@@ -157,11 +168,26 @@ const AllRooms = () => {
     return (room.maxGuests || 2) >= Number(guestsFilter);
   };
 
+  // Matches Favorites
+  const matchesFavorites = (room) => {
+    if (!onlyFavorites) return true;
+    return isFavoriteRoom(room.id || room._id);
+  };
+
   const filteredRooms = useMemo(() => {
     return rooms
-      .filter(room => matchesRoomType(room) && matchesPriceRange(room) && matchesAmenities(room) && filterDestination(room) && matchesGuests(room))
+      .filter(room => matchesRoomType(room) && matchesPriceRange(room) && matchesAmenities(room) && filterDestination(room) && matchesGuests(room) && matchesFavorites(room))
       .sort(sortRooms);
-  }, [rooms, selectedFilters, selectedSort, destinationQuery, addressSearch, minPrice, maxPrice, guestsFilter]);
+  }, [rooms, selectedFilters, selectedSort, destinationQuery, addressSearch, minPrice, maxPrice, guestsFilter, onlyFavorites, favoriteRoomIds]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFilters, selectedSort, destinationQuery, addressSearch, minPrice, maxPrice, guestsFilter, onlyFavorites]);
+
+  const paginatedRooms = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredRooms.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredRooms, currentPage]);
 
   // Clear All Filters
   const clearFilters = () => {
@@ -175,6 +201,7 @@ const AllRooms = () => {
     setDateFilters({ checkIn: '', checkOut: '' });
     setGuestsFilter('');
     setSelectedSort('');
+    setOnlyFavorites(false);
     setSearchParams({});
   };
 
@@ -286,6 +313,20 @@ const AllRooms = () => {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setOnlyFavorites((prev) => !prev)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+                onlyFavorites
+                  ? "bg-red-500 text-white shadow-sm"
+                  : "bg-white border border-gray-200 text-gray-700 hover:border-red-300 hover:bg-red-50"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+              <span>Phòng đã lưu ({favoriteRoomIds.length})</span>
+            </button>
           </div>
 
           {filteredRooms.length === 0 ? (
@@ -297,7 +338,8 @@ const AllRooms = () => {
               </button>
             </div>
           ) : (
-            filteredRooms.map((room) => {
+            <>
+            {paginatedRooms.map((room) => {
               const roomId = room.id || room._id;
               return (
               <div
@@ -316,8 +358,42 @@ const AllRooms = () => {
                       title="Xem chi tiết phòng"
                       className="w-full h-80 lg:h-96 object-cover cursor-pointer transition-transform duration-500 group-hover:scale-110"
                     />
+                    <button
+                      type="button"
+                      onClick={(e) => toggleFavoriteRoom(roomId, e)}
+                      title={isFavoriteRoom(roomId) ? "Bỏ lưu yêu thích" : "Lưu vào yêu thích"}
+                      className="absolute top-6 left-6 w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-gray-200 hover:scale-110 transition-all cursor-pointer"
+                    >
+                      <svg
+                        className={`w-5 h-5 transition-colors ${
+                          isFavoriteRoom(roomId)
+                            ? "text-red-500 fill-red-500"
+                            : "text-gray-600 hover:text-red-500"
+                        }`}
+                        fill={isFavoriteRoom(roomId) ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
+                    </button>
                     <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold text-gray-800 shadow-lg border border-gray-200">
                       {room.roomType}
+                    </div>
+                    <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-black/65 backdrop-blur-xs text-white pl-1.5 pr-3.5 py-1 rounded-full shadow-md">
+                      <img
+                        src={room.hotel?.owner?.image || assets.userIcon}
+                        alt="Host"
+                        className="w-7 h-7 rounded-full object-cover border border-white"
+                      />
+                      <span className="text-xs font-medium">
+                        Chủ nhà: {room.hotel?.owner?.username || "Chủ nhà HomeStay"}
+                      </span>
                     </div>
                   </div>
                   
@@ -338,9 +414,14 @@ const AllRooms = () => {
                       </p>
                     </div>
                     
-                    <div className="flex items-center gap-3">
-                      <StarRating />
-                      <p className="text-gray-500 text-sm">Được đánh giá cao</p>
+                    <div className="flex items-center gap-2">
+                      <StarRating rating={room.averageRating || 5} />
+                      <span className="text-sm font-bold text-gray-800">
+                        {room.averageRating ? Number(room.averageRating).toFixed(1) : "5.0"}
+                      </span>
+                      <p className="text-gray-500 text-sm">
+                        ({room.reviewCount > 0 ? `${room.reviewCount} đánh giá` : "Được đánh giá cao"})
+                      </p>
                     </div>
                     
                     <div className="flex items-center gap-3 text-gray-500 text-sm">
@@ -380,7 +461,17 @@ const AllRooms = () => {
                   </div>
                 </div>
               </div>
-            );})
+            );})}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredRooms.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+            </>
           )}
         </div>
         

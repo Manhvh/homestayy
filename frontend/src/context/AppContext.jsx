@@ -35,6 +35,37 @@ export const AppProvider = ({ children }) => {
     const [rooms, setRooms] = useState([]);
     const [cities, setCities] = useState([]);
     const [amenities, setAmenities] = useState([]);
+    const [favoriteRoomIds, setFavoriteRoomIds] = useState(() => {
+        try {
+            const saved = localStorage.getItem('homestay_favorites');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    const toggleFavoriteRoom = useCallback((roomId, e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const idStr = String(roomId);
+        const exists = favoriteRoomIds.includes(idStr);
+        const next = exists
+            ? favoriteRoomIds.filter((item) => item !== idStr)
+            : [...favoriteRoomIds, idStr];
+        setFavoriteRoomIds(next);
+        localStorage.setItem('homestay_favorites', JSON.stringify(next));
+        toast.success(
+            exists
+                ? 'Đã bỏ lưu khỏi danh sách yêu thích'
+                : 'Đã lưu vào danh sách phòng yêu thích!'
+        );
+    }, [favoriteRoomIds]);
+
+    const isFavoriteRoom = useCallback((roomId) => {
+        return favoriteRoomIds.includes(String(roomId));
+    }, [favoriteRoomIds]);
 
     // Open Login / Register Modal
     const openLoginModal = () => setShowAuthModal(true);
@@ -244,6 +275,65 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    // Request password reset code
+    const sendResetPasswordCode = async (email) => {
+        try {
+            const { data } = await axios.post('/api/auth/forgot-password', { email });
+            if (data.success) {
+                toast.success(data.message || 'Đã gửi mã đặt lại mật khẩu!');
+                return { success: true, verifyCode: data.verifyCode, mailSent: data.mailSent };
+            } else {
+                toast.error(data.message || 'Không thể gửi mã.');
+                return { success: false, message: data.message };
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || error.message || 'Lỗi gửi mã đặt lại mật khẩu.';
+            toast.error(msg);
+            return { success: false, message: msg };
+        }
+    };
+
+    // Reset password with code
+    const resetPassword = async (email, codeVerify, newPassword) => {
+        try {
+            const { data } = await axios.post('/api/auth/reset-password', { email, codeVerify, newPassword });
+            if (data.success) {
+                toast.success(data.message || 'Đặt lại mật khẩu thành công!');
+                return { success: true };
+            } else {
+                toast.error(data.message || 'Không thể đặt lại mật khẩu.');
+                return { success: false, message: data.message };
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || error.message || 'Lỗi đặt lại mật khẩu.';
+            toast.error(msg);
+            return { success: false, message: msg };
+        }
+    };
+
+    // Change password for logged in user
+    const changePassword = async (currentPassword, newPassword) => {
+        try {
+            const currentToken = await getToken();
+            const { data } = await axios.put(
+                '/api/auth/change-password',
+                { currentPassword, newPassword },
+                { headers: { Authorization: `Bearer ${currentToken}` } }
+            );
+            if (data.success) {
+                toast.success(data.message || 'Đổi mật khẩu thành công!');
+                return { success: true };
+            } else {
+                toast.error(data.message || 'Không thể đổi mật khẩu.');
+                return { success: false, message: data.message };
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || error.message || 'Lỗi đổi mật khẩu.';
+            toast.error(msg);
+            return { success: false, message: msg };
+        }
+    };
+
     useEffect(() => {
         fetchRooms();
         fetchCategories();
@@ -260,7 +350,13 @@ export const AppProvider = ({ children }) => {
         login,
         register,
         sendVerifyCode,
+        sendResetPasswordCode,
+        resetPassword,
+        changePassword,
         logout,
+        favoriteRoomIds,
+        toggleFavoriteRoom,
+        isFavoriteRoom,
         openLoginModal,
         closeLoginModal,
         showAuthModal,
