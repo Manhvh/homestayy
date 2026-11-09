@@ -240,7 +240,7 @@ const Navbar = () => {
       </div>
 
       {/* Mobile Menu Button */}
-      <div className="flex items-center gap-3 md:hidden">
+      <div className="flex items-center gap-3 md:hidden search-container">
         {/* Mobile Search Button */}
         <button
           onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -253,7 +253,7 @@ const Navbar = () => {
           <img
             src={assets.searchIcon}
             alt="search"
-            className={`h-8 w-8 transition-all duration-300 ${isScrolled && "invert"}`} 
+            className={`h-6 w-6 transition-all duration-300 ${isScrolled && "invert"}`} 
           />
         </button>
 
@@ -262,7 +262,7 @@ const Navbar = () => {
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           src={assets.menuIcon}
           alt="menu-icon"
-          className={`${isScrolled && "invert"}h-4 cursor-pointer`} />
+          className={`${isScrolled ? "invert" : ""} h-5 w-5 cursor-pointer`} />
       </div>
 
       {/* Mobile Menu */}
@@ -344,7 +344,7 @@ const Navbar = () => {
 
       {/* Mobile Search Modal */}
       {isSearchOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 md:hidden">
+        <div className="fixed inset-0 bg-black/50 z-50 md:hidden search-container">
           <div className="bg-white m-4 rounded-xl p-6 mt-20">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-800">Tìm kiếm Homestay</h3>

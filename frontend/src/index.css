@@ -155,3 +155,20 @@ html {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+/* Fix iOS Safari / mobile date input overflow & alignment */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
+  text-align: left;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}

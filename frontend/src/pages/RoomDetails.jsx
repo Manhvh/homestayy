@@ -922,7 +922,7 @@ const RoomDetails = () => {
             {/* Form */}
             <form onSubmit={onSubmitHandler} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+                <div className="min-w-0">
                   <label htmlFor="modalCheckInDate" className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
                     Ngày nhận phòng *
                   </label>
@@ -936,11 +936,11 @@ const RoomDetails = () => {
                       setIsAvailable(false);
                     }}
                     required
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="w-full min-w-0 max-w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition appearance-none"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <label htmlFor="modalCheckOutDate" className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
                     Ngày trả phòng *
                   </label>
@@ -955,7 +955,7 @@ const RoomDetails = () => {
                       setIsAvailable(false);
                     }}
                     required
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition"
+                    className="w-full min-w-0 max-w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition appearance-none"
                   />
                 </div>
               </div>
