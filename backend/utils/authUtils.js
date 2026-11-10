@@ -6,6 +6,38 @@ const base64UrlDecode = (str) => Buffer.from(str, 'base64url').toString('utf8');
 const JWT_SECRET = process.env.JWT_SECRET || 'homestay_graduation_secret_key_2026';
 
 /**
+ * Validate password strength for registration, reset, and password change
+ * Rules: >= 8 chars, no spaces, >= 1 uppercase, >= 1 lowercase, >= 1 number, >= 1 special char
+ */
+export const validatePasswordStrength = (password) => {
+    if (!password || typeof password !== 'string') {
+        return { valid: false, message: 'Vui lòng nhập mật khẩu.' };
+    }
+    if (/\s/.test(password)) {
+        return { valid: false, message: 'Mật khẩu không được chứa khoảng trắng.' };
+    }
+    if (password.length < 8) {
+        return { valid: false, message: 'Mật khẩu phải có ít nhất 8 ký tự.' };
+    }
+    if (password.length > 64) {
+        return { valid: false, message: 'Mật khẩu không được vượt quá 64 ký tự.' };
+    }
+    if (!/[A-Z]/.test(password)) {
+        return { valid: false, message: 'Mật khẩu phải chứa ít nhất 1 chữ cái viết hoa (A-Z).' };
+    }
+    if (!/[a-z]/.test(password)) {
+        return { valid: false, message: 'Mật khẩu phải chứa ít nhất 1 chữ cái viết thường (a-z).' };
+    }
+    if (!/[0-9]/.test(password)) {
+        return { valid: false, message: 'Mật khẩu phải chứa ít nhất 1 chữ số (0-9).' };
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]~`;']/.test(password)) {
+        return { valid: false, message: 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (ví dụ: @, #, $, !, %...).' };
+    }
+    return { valid: true, message: 'Mật khẩu hợp lệ.' };
+};
+
+/**
  * Hash password using crypto.scrypt
  */
 export const hashPassword = (password) => {

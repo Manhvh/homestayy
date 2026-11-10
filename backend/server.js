@@ -42,7 +42,7 @@ app.use(
             : '*',
         credentials: true,
     })
-); // Enable Cross-Origin Resource Sharing
+);
 
 // Serve uploaded images statically
 app.use('/uploads', express.static('uploads'));
@@ -60,6 +60,29 @@ app.use('/api/bookings', bookingRouter);
 app.use('/api/reviews', reviewRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/admin', adminRouter);
+
+// 404 Not Found handler
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: `Không tìm thấy đường dẫn API: ${req.method} ${req.originalUrl}`,
+    });
+});
+
+// Global error handler (including Multer / JSON parsing errors)
+app.use((err, req, res, _next) => {
+    console.error('Unhandled API Error:', err);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+            success: false,
+            message: 'Kích thước tệp tải lên vượt quá giới hạn cho phép (10MB).',
+        });
+    }
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Lỗi máy chủ nội bộ.',
+    });
+});
 
 const PORT = process.env.PORT || 4000;
 

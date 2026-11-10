@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { assets } from '../assets/assets'
 import { useAppContext } from '../context/AppContext'
 
-const HotelCard = ({room, index}) => {
+const HotelCard = ({ room }) => {
   const { currency, isFavoriteRoom, toggleFavoriteRoom, searchDates } = useAppContext();
   const roomId = room.id || room._id;
   const hotel = room.hotel || {};

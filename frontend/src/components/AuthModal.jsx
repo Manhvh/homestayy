@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { checkPasswordRules } from '../utils/passwordValidator';
 
 const AuthModal = ({ isOpen, onClose }) => {
   const { login, register, sendVerifyCode, sendResetPasswordCode, resetPassword, toast } = useAppContext();
@@ -7,16 +8,20 @@ const AuthModal = ({ isOpen, onClose }) => {
   const [isForgotMode, setIsForgotMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
+    confirmPassword: '',
     phone: '',
     codeVerify: '',
     role: 'user', // 'user' or 'hotelOwner'
   });
+
+  const passwordStatus = useMemo(() => checkPasswordRules(formData.password), [formData.password]);
 
   if (!isOpen) return null;
 
@@ -26,16 +31,15 @@ const AuthModal = ({ isOpen, onClose }) => {
 
   const handleSendVerifyCode = async () => {
     if (!formData.email) {
-      toast.error("Vui lòng nhập địa chỉ email trước khi nhận mã xác thực.");
+      toast.error("Vui lòng nhập email trước khi nhận mã xác thực.");
       return;
     }
     setSendingCode(true);
     try {
-      const res = isForgotMode
-        ? await sendResetPasswordCode(formData.email)
-        : await sendVerifyCode(formData.email, formData.username);
-      if (res.success && res.verifyCode) {
-        setGeneratedCode(res.verifyCode);
+      if (isForgotMode) {
+        await sendResetPasswordCode(formData.email);
+      } else {
+        await sendVerifyCode(formData.email, formData.username);
       }
     } finally {
       setSendingCode(false);
@@ -53,15 +57,35 @@ const AuthModal = ({ isOpen, onClose }) => {
           setLoading(false);
           return;
         }
+        if (!passwordStatus.isValid) {
+          toast.error(passwordStatus.errorMessage);
+          setLoading(false);
+          return;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          toast.error("Mật khẩu xác nhận không khớp.");
+          setLoading(false);
+          return;
+        }
         const res = await resetPassword(formData.email, formData.codeVerify, formData.password);
         if (res.success) {
           setIsForgotMode(false);
           setIsLoginMode(true);
-          setFormData((prev) => ({ ...prev, codeVerify: '', password: '' }));
+          setFormData((prev) => ({ ...prev, codeVerify: '', password: '', confirmPassword: '' }));
         }
       } else if (isLoginMode) {
         if (!formData.email || !formData.password) {
           toast.error("Vui lòng nhập email và mật khẩu.");
+          setLoading(false);
+          return;
+        }
+        if (/\s/.test(formData.password)) {
+          toast.error("Mật khẩu không được chứa khoảng trắng.");
+          setLoading(false);
+          return;
+        }
+        if (formData.password.length < 6) {
+          toast.error("Mật khẩu phải có ít nhất 6 ký tự.");
           setLoading(false);
           return;
         }
@@ -72,6 +96,16 @@ const AuthModal = ({ isOpen, onClose }) => {
       } else {
         if (!formData.username || !formData.email || !formData.password) {
           toast.error("Vui lòng điền đầy đủ các trường bắt buộc.");
+          setLoading(false);
+          return;
+        }
+        if (!passwordStatus.isValid) {
+          toast.error(passwordStatus.errorMessage);
+          setLoading(false);
+          return;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          toast.error("Mật khẩu xác nhận không khớp.");
           setLoading(false);
           return;
         }
@@ -179,7 +213,7 @@ const AuthModal = ({ isOpen, onClose }) => {
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Địa chỉ Email</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Email</label>
               <input
                 type="email"
                 name="email"
@@ -206,16 +240,147 @@ const AuthModal = ({ isOpen, onClose }) => {
                   </button>
                 )}
               </div>
-              <input
-                type="password"
-                name="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Ít nhất 6 ký tự"
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder={isLoginMode && !isForgotMode ? 'Nhập mật khẩu của bạn' : 'Ít nhất 8 ký tự, gồm chữ hoa, thường, số & ký tự đặc biệt'}
+                  className="w-full pl-3.5 pr-10 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              {/* Password Strength Indicator & Checklist for Register / Forgot Password */}
+              {(!isLoginMode || isForgotMode) && formData.password.length > 0 && (
+                <div className="mt-2 p-2.5 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-semibold">
+                    <span className="text-gray-600">Độ mạnh mật khẩu:</span>
+                    <span
+                      className={
+                        passwordStatus.score <= 1
+                          ? 'text-red-600'
+                          : passwordStatus.score === 2
+                          ? 'text-amber-600'
+                          : passwordStatus.score === 3
+                          ? 'text-blue-600'
+                          : 'text-emerald-600'
+                      }
+                    >
+                      {passwordStatus.score <= 1
+                        ? 'Yếu'
+                        : passwordStatus.score === 2
+                        ? 'Trung bình'
+                        : passwordStatus.score === 3
+                        ? 'Khá'
+                        : 'Mạnh (Đạt chuẩn)'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[1, 2, 3, 4].map((step) => (
+                      <div
+                        key={step}
+                        className={`h-1.5 rounded-full transition-all ${
+                          passwordStatus.score >= step
+                            ? passwordStatus.score <= 1
+                              ? 'bg-red-500'
+                              : passwordStatus.score === 2
+                              ? 'bg-amber-500'
+                              : passwordStatus.score === 3
+                              ? 'bg-blue-500'
+                              : 'bg-emerald-500'
+                            : 'bg-gray-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
+                    <div className={`flex items-center gap-1 ${passwordStatus.minLength ? 'text-emerald-600 font-medium' : 'text-gray-500'}`}>
+                      <span>{passwordStatus.minLength ? '✓' : '○'}</span>
+                      <span>Ít nhất 8 ký tự</span>
+                    </div>
+                    <div className={`flex items-center gap-1 ${passwordStatus.hasUpperLower ? 'text-emerald-600 font-medium' : 'text-gray-500'}`}>
+                      <span>{passwordStatus.hasUpperLower ? '✓' : '○'}</span>
+                      <span>Chữ hoa & chữ thường</span>
+                    </div>
+                    <div className={`flex items-center gap-1 ${passwordStatus.hasNumber ? 'text-emerald-600 font-medium' : 'text-gray-500'}`}>
+                      <span>{passwordStatus.hasNumber ? '✓' : '○'}</span>
+                      <span>Ít nhất 1 chữ số (0-9)</span>
+                    </div>
+                    <div className={`flex items-center gap-1 ${passwordStatus.hasSpecial ? 'text-emerald-600 font-medium' : 'text-gray-500'}`}>
+                      <span>{passwordStatus.hasSpecial ? '✓' : '○'}</span>
+                      <span>Ký tự đặc biệt (@#$!...)</span>
+                    </div>
+                  </div>
+                  {!passwordStatus.noSpace && (
+                    <p className="text-[11px] text-red-600 font-medium">
+                      ✕ Mật khẩu không được chứa khoảng trắng
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
+            {(!isLoginMode || isForgotMode) && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  {isForgotMode ? 'Xác nhận mật khẩu mới' : 'Xác nhận mật khẩu'} <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    required
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Nhập lại mật khẩu"
+                    className={`w-full pl-3.5 pr-10 py-2.5 text-sm border rounded-xl focus:ring-2 outline-none transition ${
+                      formData.confirmPassword && formData.confirmPassword !== formData.password
+                        ? 'border-red-400 focus:ring-red-400'
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {formData.confirmPassword && formData.confirmPassword !== formData.password && (
+                  <p className="text-[11px] text-red-500 mt-1">Mật khẩu xác nhận chưa khớp.</p>
+                )}
+              </div>
+            )}
 
             {!isLoginMode && !isForgotMode && (
               <div>

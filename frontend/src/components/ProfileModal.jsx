@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { getAvatarUrl, createRandomAvatarUrl, getRoleBadgeInfo } from '../utils/formatters';
 
 const ProfileModal = ({ isOpen, onClose }) => {
   const { user, updateUserProfile, toast } = useAppContext();
@@ -21,7 +22,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
         email: user.email || '',
         image: user.image || '',
       });
-      setPreviewUrl(user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.username || 'User')}`);
+      setPreviewUrl(getAvatarUrl(user));
       setImageFile(null);
     }
   }, [user, isOpen]);
@@ -41,8 +42,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
   };
 
   const handleRandomAvatar = () => {
-    const randomSeed = Math.random().toString(36).substring(7);
-    const newAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`;
+    const newAvatar = createRandomAvatarUrl();
     setImageFile(null);
     setPreviewUrl(newAvatar);
     setFormData((prev) => ({ ...prev, image: newAvatar }));
@@ -80,18 +80,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const getRoleLabel = (role) => {
-    switch (role) {
-      case 'admin':
-        return { text: 'Quản trị viên (Admin)', bg: 'bg-rose-50 text-rose-700 border-rose-200' };
-      case 'hotelOwner':
-        return { text: 'Chủ Homestay (Partner)', bg: 'bg-purple-50 text-purple-700 border-purple-200' };
-      default:
-        return { text: 'Khách hàng', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
-    }
-  };
-
-  const roleInfo = getRoleLabel(user?.role);
+  const roleInfo = getRoleBadgeInfo(user?.role);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">

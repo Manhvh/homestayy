@@ -1,24 +1,37 @@
+import { fn, col } from "sequelize";
 import { User, Hotel, Room, Booking, Review } from "../models/index.js";
 
 // GET /api/admin/users
 export const getAllUsers = async (req, res) => {
     try {
-        const users = await User.findAll({ order: [["createdAt", "DESC"]] });
+        const [users, bookingCounts, hotels] = await Promise.all([
+            User.findAll({ order: [["createdAt", "DESC"]] }),
+            Booking.findAll({
+                attributes: ["userId", [fn("COUNT", col("id")), "count"]],
+                group: ["userId"],
+                raw: true,
+            }),
+            Hotel.findAll({
+                attributes: ["id", "name", "city", "status", "ownerId"],
+                raw: true,
+            }),
+        ]);
 
-        const usersWithDetails = await Promise.all(
-            users.map(async (u) => {
-                const bookingCount = await Booking.count({ where: { userId: u.id } });
-                const hotel = await Hotel.findOne({
-                    where: { ownerId: u.id },
-                    attributes: ["id", "name", "city", "status"]
-                });
-                return {
-                    ...u.toJSON(),
-                    bookingCount,
-                    hotel: hotel ? hotel.toJSON() : null,
-                };
-            })
+        const bookingCountMap = new Map(
+            bookingCounts.map((row) => [row.userId, Number(row.count) || 0])
         );
+        const hotelByOwnerMap = new Map(
+            hotels.map((h) => [
+                h.ownerId,
+                { id: h.id, name: h.name, city: h.city, status: h.status },
+            ])
+        );
+
+        const usersWithDetails = users.map((u) => ({
+            ...u.toJSON(),
+            bookingCount: bookingCountMap.get(u.id) || 0,
+            hotel: hotelByOwnerMap.get(u.id) || null,
+        }));
 
         res.json({ success: true, users: usersWithDetails });
     } catch (error) {
@@ -79,22 +92,35 @@ export const toggleUserBlock = async (req, res) => {
 // GET /api/admin/hotels
 export const getAllHotels = async (req, res) => {
     try {
-        const hotels = await Hotel.findAll({
-            include: [{ model: User, as: "owner", attributes: ["id", "username", "email", "image"] }],
-            order: [["createdAt", "DESC"]]
-        });
+        const [hotels, roomCounts, bookingCounts] = await Promise.all([
+            Hotel.findAll({
+                include: [{ model: User, as: "owner", attributes: ["id", "username", "email", "image"] }],
+                order: [["createdAt", "DESC"]],
+            }),
+            Room.findAll({
+                attributes: ["hotelId", [fn("COUNT", col("id")), "count"]],
+                group: ["hotelId"],
+                raw: true,
+            }),
+            Booking.findAll({
+                attributes: ["hotelId", [fn("COUNT", col("id")), "count"]],
+                group: ["hotelId"],
+                raw: true,
+            }),
+        ]);
 
-        const hotelsWithRooms = await Promise.all(
-            hotels.map(async (h) => {
-                const roomCount = await Room.count({ where: { hotelId: h.id } });
-                const bookingCount = await Booking.count({ where: { hotelId: h.id } });
-                return {
-                    ...h.toJSON(),
-                    roomCount,
-                    bookingCount,
-                };
-            })
+        const roomCountMap = new Map(
+            roomCounts.map((row) => [row.hotelId, Number(row.count) || 0])
         );
+        const bookingCountMap = new Map(
+            bookingCounts.map((row) => [row.hotelId, Number(row.count) || 0])
+        );
+
+        const hotelsWithRooms = hotels.map((h) => ({
+            ...h.toJSON(),
+            roomCount: roomCountMap.get(h.id) || 0,
+            bookingCount: bookingCountMap.get(h.id) || 0,
+        }));
 
         res.json({ success: true, hotels: hotelsWithRooms });
     } catch (error) {
@@ -131,39 +157,51 @@ export const updateHotelStatus = async (req, res) => {
 // GET /api/admin/stats
 export const getAdminStats = async (req, res) => {
     try {
-        const totalUsers = await User.count();
-        const totalOwners = await User.count({ where: { role: "hotelOwner" } });
-        const totalHotels = await Hotel.count();
-        const pendingHotels = await Hotel.count({ where: { status: "pending" } });
-        const approvedHotels = await Hotel.count({ where: { status: "approved" } });
+        const [
+            totalUsers,
+            totalOwners,
+            totalHotels,
+            pendingHotels,
+            approvedHotels,
+            bookings,
+            reviews,
+            recentBookings,
+            recentReviews,
+        ] = await Promise.all([
+            User.count(),
+            User.count({ where: { role: "hotelOwner" } }),
+            Hotel.count(),
+            Hotel.count({ where: { status: "pending" } }),
+            Hotel.count({ where: { status: "approved" } }),
+            Booking.findAll({ attributes: ["id", "totalPrice", "status"] }),
+            Review.findAll({ attributes: ["id", "rating"] }),
+            Booking.findAll({
+                include: [
+                    { model: Hotel, as: "hotel", attributes: ["id", "name", "city"] },
+                    { model: User, as: "user", attributes: ["id", "username", "email"] }
+                ],
+                order: [["createdAt", "DESC"]],
+                limit: 5,
+            }),
+            Review.findAll({
+                include: [
+                    { model: Hotel, as: "hotel", attributes: ["id", "name"] },
+                    { model: User, as: "user", attributes: ["id", "username", "image"] }
+                ],
+                order: [["createdAt", "DESC"]],
+                limit: 5,
+            }),
+        ]);
 
-        const bookings = await Booking.findAll();
         const totalBookings = bookings.length;
-        const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+        const totalRevenue = bookings
+            .filter((b) => b.status !== "cancelled")
+            .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
 
-        const reviews = await Review.findAll();
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
-            ? (reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews).toFixed(1)
+            ? Number((reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews).toFixed(1))
             : 0;
-
-        const recentBookings = await Booking.findAll({
-            include: [
-                { model: Hotel, as: "hotel", attributes: ["id", "name", "city"] },
-                { model: User, as: "user", attributes: ["id", "username", "email"] }
-            ],
-            order: [["createdAt", "DESC"]],
-            limit: 5,
-        });
-
-        const recentReviews = await Review.findAll({
-            include: [
-                { model: Hotel, as: "hotel", attributes: ["id", "name"] },
-                { model: User, as: "user", attributes: ["id", "username", "image"] }
-            ],
-            order: [["createdAt", "DESC"]],
-            limit: 5,
-        });
 
         res.json({
             success: true,
@@ -176,7 +214,7 @@ export const getAdminStats = async (req, res) => {
                 totalBookings,
                 totalRevenue,
                 totalReviews,
-                averageRating: Number(averageRating),
+                averageRating,
                 recentBookings,
                 recentReviews,
             }

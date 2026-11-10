@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Title from '../../components/Title';
 import Pagination from '../../components/Pagination';
 import { useAppContext } from '../../context/AppContext';
@@ -19,7 +19,7 @@ const AdminCategories = () => {
     const [newDesc, setNewDesc] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const loadCategories = async () => {
+    const loadCategories = useCallback(async () => {
         try {
             setLoading(true);
             const { data } = await axios.get('/api/categories');
@@ -33,7 +33,7 @@ const AdminCategories = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [axios]);
 
     const handleAdd = async (e) => {
         e.preventDefault();
@@ -89,7 +89,7 @@ const AdminCategories = () => {
 
     useEffect(() => {
         loadCategories();
-    }, []);
+    }, [loadCategories]);
 
     const currentList = activeTab === 'amenity' ? amenities : cities;
 
@@ -175,21 +175,24 @@ const AdminCategories = () => {
             ) : (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {paginatedList.map((item) => (
-                            <div key={item._id} className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <p className="font-bold text-gray-900 text-sm">{item.name}</p>
-                                    <p className="text-xs text-gray-500 line-clamp-1">{item.description || "Không có mô tả"}</p>
+                        {paginatedList.map((item) => {
+                            const itemId = item.id || item._id;
+                            return (
+                                <div key={itemId} className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <p className="font-bold text-gray-900 text-sm">{item.name}</p>
+                                        <p className="text-xs text-gray-500 line-clamp-1">{item.description || "Không có mô tả"}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDelete(itemId)}
+                                        title="Xóa danh mục"
+                                        className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition"
+                                    >
+                                        ✕
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => handleDelete(item._id)}
-                                    title="Xóa danh mục"
-                                    className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                     <Pagination
                         currentPage={currentPage}

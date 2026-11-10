@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Title from '../../components/Title';
 import { useAppContext } from '../../context/AppContext';
 
@@ -7,7 +7,7 @@ const AdminDashboard = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
         try {
             setLoading(true);
             const token = await getToken();
@@ -22,11 +22,11 @@ const AdminDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [axios, getToken]);
 
     useEffect(() => {
         fetchStats();
-    }, []);
+    }, [fetchStats]);
 
     if (loading) {
         return <div className="py-12 text-gray-500">Đang tải dữ liệu báo cáo thống kê...</div>;
@@ -79,7 +79,7 @@ const AdminDashboard = () => {
                     {stats?.recentBookings && stats.recentBookings.length > 0 ? (
                         <div className="space-y-3">
                             {stats.recentBookings.map((b) => (
-                                <div key={b._id} className="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-xs">
+                                <div key={b.id || b._id} className="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-xs">
                                     <div>
                                         <p className="font-semibold text-gray-800">{b.user?.username || "Khách"} → {b.hotel?.name}</p>
                                         <p className="text-gray-400">{new Date(b.createdAt).toLocaleString()}</p>
@@ -106,7 +106,7 @@ const AdminDashboard = () => {
                     {stats?.recentReviews && stats.recentReviews.length > 0 ? (
                         <div className="space-y-3">
                             {stats.recentReviews.map((r) => (
-                                <div key={r._id} className="p-3 bg-gray-50 rounded-xl text-xs space-y-1">
+                                <div key={r.id || r._id} className="p-3 bg-gray-50 rounded-xl text-xs space-y-1">
                                     <div className="flex justify-between items-center">
                                         <p className="font-semibold text-gray-800">{r.user?.username || "Ẩn danh"} @ {r.hotel?.name}</p>
                                         <span className="text-amber-500 font-bold">★ {r.rating}</span>

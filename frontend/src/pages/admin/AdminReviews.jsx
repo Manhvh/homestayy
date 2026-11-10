@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Title from '../../components/Title';
 import Pagination from '../../components/Pagination';
 import { useAppContext } from '../../context/AppContext';
+import { getAvatarUrl } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 10;
@@ -13,7 +14,7 @@ const AdminReviews = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
 
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         try {
             setLoading(true);
             const token = await getToken();
@@ -30,7 +31,7 @@ const AdminReviews = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [axios, getToken]);
 
     const handleDeleteReview = async (id) => {
         if (!window.confirm("Bạn có chắc chắn muốn xóa đánh giá này?")) return;
@@ -54,7 +55,7 @@ const AdminReviews = () => {
 
     useEffect(() => {
         fetchReviews();
-    }, []);
+    }, [fetchReviews]);
 
     const total = stats?.totalReviews || 0;
     const breakdown = stats?.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
@@ -121,7 +122,7 @@ const AdminReviews = () => {
                                 <div className="space-y-1.5 flex-1">
                                     <div className="flex items-center gap-3">
                                         <img
-                                            src={r.user?.image}
+                                            src={getAvatarUrl(r.user)}
                                             alt="avatar"
                                             className="w-8 h-8 rounded-full object-cover border"
                                         />

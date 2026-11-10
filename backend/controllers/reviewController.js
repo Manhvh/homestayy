@@ -1,6 +1,24 @@
 import { Op } from "sequelize";
 import { Review, Hotel, Room, User, Booking } from "../models/index.js";
 
+const buildReviewStats = (reviews = []) => {
+    const totalReviews = reviews.length;
+    const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let sum = 0;
+
+    reviews.forEach((r) => {
+        const rating = Number(r.rating) || 0;
+        sum += rating;
+        const star = Math.round(rating);
+        if (ratingBreakdown[star] !== undefined) {
+            ratingBreakdown[star]++;
+        }
+    });
+
+    const averageRating = totalReviews > 0 ? Number((sum / totalReviews).toFixed(1)) : 0;
+    return { totalReviews, averageRating, ratingBreakdown };
+};
+
 // API to create a new review (or update if same bookingId)
 export const createReview = async (req, res) => {
     try {
@@ -99,12 +117,9 @@ export const getHotelReviews = async (req, res) => {
             order: [["createdAt", "DESC"]]
         });
 
-        const totalReviews = reviews.length;
-        const averageRating = totalReviews > 0
-            ? (reviews.reduce((acc, item) => acc + item.rating, 0) / totalReviews).toFixed(1)
-            : 0;
+        const { totalReviews, averageRating } = buildReviewStats(reviews);
 
-        res.json({ success: true, reviews, totalReviews, averageRating: Number(averageRating) });
+        res.json({ success: true, reviews, totalReviews, averageRating });
     } catch (error) {
         console.error("Get hotel reviews error:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -119,11 +134,7 @@ export const getOwnerReviews = async (req, res) => {
             return res.json({
                 success: true,
                 hotel: null,
-                stats: {
-                    totalReviews: 0,
-                    averageRating: 0,
-                    ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-                },
+                stats: buildReviewStats([]),
                 reviews: [],
             });
         }
@@ -138,27 +149,12 @@ export const getOwnerReviews = async (req, res) => {
             order: [["createdAt", "DESC"]],
         });
 
-        const totalReviews = reviews.length;
-        const averageRating = totalReviews > 0
-            ? (reviews.reduce((acc, item) => acc + item.rating, 0) / totalReviews).toFixed(1)
-            : 0;
-
-        const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        reviews.forEach(r => {
-            const star = Math.round(r.rating);
-            if (ratingBreakdown[star] !== undefined) {
-                ratingBreakdown[star]++;
-            }
-        });
+        const stats = buildReviewStats(reviews);
 
         res.json({
             success: true,
             hotel: { id: hotel.id, name: hotel.name, city: hotel.city },
-            stats: {
-                totalReviews,
-                averageRating: Number(averageRating),
-                ratingBreakdown,
-            },
+            stats,
             reviews,
         });
     } catch (error) {
@@ -178,24 +174,13 @@ export const getReviewStats = async (req, res) => {
             order: [["createdAt", "DESC"]]
         });
 
-        const totalReviews = reviews.length;
-        const averageRating = totalReviews > 0
-            ? (reviews.reduce((acc, item) => acc + item.rating, 0) / totalReviews).toFixed(1)
-            : 0;
-
-        const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        reviews.forEach(r => {
-            const star = Math.round(r.rating);
-            if (ratingBreakdown[star] !== undefined) {
-                ratingBreakdown[star]++;
-            }
-        });
+        const { totalReviews, averageRating, ratingBreakdown } = buildReviewStats(reviews);
 
         res.json({
             success: true,
             stats: {
                 totalReviews,
-                averageRating: Number(averageRating),
+                averageRating,
                 ratingBreakdown,
                 recentReviews: reviews,
             }

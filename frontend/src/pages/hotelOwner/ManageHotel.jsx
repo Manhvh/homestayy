@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Title from '../../components/Title';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
@@ -19,7 +19,7 @@ const ManageHotel = () => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
-    const fetchMyHotel = async () => {
+    const fetchMyHotel = useCallback(async () => {
         try {
             setLoading(true);
             const token = await getToken();
@@ -43,7 +43,7 @@ const ManageHotel = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [axios, getToken]);
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -70,7 +70,7 @@ const ManageHotel = () => {
         if (user) {
             fetchMyHotel();
         }
-    }, [user]);
+    }, [user, fetchMyHotel]);
 
     return (
         <div className="max-w-3xl pb-16">

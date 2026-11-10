@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Title from "../components/Title";
 import Pagination from "../components/Pagination";
 import { assets } from "../assets/assets";
@@ -32,7 +32,7 @@ const MyBookings = () => {
   const [deletingReviewId, setDeletingReviewId] = useState(null);
 
   // Function to fetch the User Booking Data from database
-  const fetchUserBookings = async () => {
+  const fetchUserBookings = useCallback(async () => {
     try {
       setLoading(true);
       if (!user) {
@@ -66,7 +66,7 @@ const MyBookings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [axios, getToken, user]);
 
   // User cancel booking
   const handleCancelBooking = async (bookingId) => {
@@ -193,7 +193,7 @@ const MyBookings = () => {
     if (user) {
       fetchUserBookings();
     }
-  }, [user]);
+  }, [user, fetchUserBookings]);
 
   const validBookings = useMemo(() => {
     const kw = searchQuery.trim().replace(/^#/, "").toLowerCase();

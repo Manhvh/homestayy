@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Title from '../../components/Title';
 import { useAppContext } from '../../context/AppContext';
 
@@ -8,7 +8,7 @@ const ScheduleCalendar = () => {
     const [filterStatus, setFilterStatus] = useState('all');
     const [loading, setLoading] = useState(false);
 
-    const fetchBookings = async () => {
+    const fetchBookings = useCallback(async () => {
         try {
             setLoading(true);
             const token = await getToken();
@@ -24,13 +24,13 @@ const ScheduleCalendar = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [axios, getToken]);
 
     useEffect(() => {
         if (user) {
             fetchBookings();
         }
-    }, [user]);
+    }, [user, fetchBookings]);
 
     const filtered = bookings.filter(b => {
         if (filterStatus === 'all') return true;
@@ -96,7 +96,7 @@ const ScheduleCalendar = () => {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {activeStays.map(b => (
-                                    <div key={b._id} className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                                    <div key={b.id || b._id} className="p-4 bg-green-50 border border-green-200 rounded-xl">
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <p className="font-bold text-gray-900">{b.user?.username || "Khách hàng"}</p>
@@ -125,7 +125,7 @@ const ScheduleCalendar = () => {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {upcomingStays.map(b => (
-                                    <div key={b._id} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                    <div key={b.id || b._id} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <p className="font-bold text-gray-900">{b.user?.username || "Khách hàng"}</p>
@@ -166,7 +166,7 @@ const ScheduleCalendar = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {pastStays.slice(0, 10).map(b => (
-                                        <tr key={b._id}>
+                                        <tr key={b.id || b._id}>
                                             <td className="py-2 px-3 font-medium">{b.user?.username || "Khách"}</td>
                                             <td className="py-2 px-3">{b.room?.roomType}</td>
                                             <td className="py-2 px-3">{new Date(b.checkInDate).toLocaleDateString()} - {new Date(b.checkOutDate).toLocaleDateString()}</td>

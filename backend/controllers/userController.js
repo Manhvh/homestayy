@@ -1,3 +1,5 @@
+import { getUploadedFileUrl } from "../middleware/uploadMiddleware.js";
+
 // GET /api/user/
 export const getUserData = async (req, res) => {
     try {
@@ -6,12 +8,11 @@ export const getUserData = async (req, res) => {
         const isBlocked = req.user.isBlocked;
         res.json({ success: true, role, recentSearchedCities, isBlocked, user: req.user.toJSON() });
     } catch (error) {
-        res.json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
 // POST /api/user/sync
-// Direct user registration / login synchronization into MySQL table (replaces Webhooks)
 export const syncUserData = async (req, res) => {
     try {
         const { email, username, image } = req.body;
@@ -50,21 +51,21 @@ export const syncUserData = async (req, res) => {
 export const storeRecentSearchedCities = async (req, res) => {
     try {
         const { recentSearchedCity } = req.body;
-        const user = req.user;
-        let cities = Array.isArray(user.recentSearchedCities) ? [...user.recentSearchedCities] : [];
-
-        if (cities.length < 3) {
-            cities.push(recentSearchedCity);
-        } else {
-            cities.shift();
-            cities.push(recentSearchedCity);
+        const trimmedCity = recentSearchedCity ? String(recentSearchedCity).trim() : "";
+        if (!trimmedCity) {
+            return res.status(400).json({ success: false, message: "Tên thành phố không được để trống." });
         }
+
+        const user = req.user;
+        const existing = Array.isArray(user.recentSearchedCities) ? user.recentSearchedCities : [];
+        const filtered = existing.filter((c) => String(c).toLowerCase() !== trimmedCity.toLowerCase());
+        const cities = [...filtered, trimmedCity].slice(-3);
+
         user.recentSearchedCities = cities;
         await user.save();
-        res.json({ success: true, message: "City added" });
-
+        res.json({ success: true, message: "Đã lưu lịch sử tìm kiếm.", recentSearchedCities: cities });
     } catch (error) {
-        res.json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -87,7 +88,7 @@ export const updateUserProfile = async (req, res) => {
         }
 
         if (req.file) {
-            user.image = `/uploads/${req.file.filename}`;
+            user.image = getUploadedFileUrl(req, req.file.filename);
         } else if (req.body.image !== undefined && req.body.image.trim()) {
             user.image = req.body.image.trim();
         }

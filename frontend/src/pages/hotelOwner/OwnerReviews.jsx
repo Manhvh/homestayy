@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Title from "../../components/Title";
 import Pagination from "../../components/Pagination";
 import { assets } from "../../assets/assets";
@@ -25,7 +25,7 @@ const OwnerReviews = () => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchOwnerReviews = async () => {
+  const fetchOwnerReviews = useCallback(async () => {
     try {
       setLoading(true);
       const token = await getToken();
@@ -51,7 +51,7 @@ const OwnerReviews = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [axios, getToken]);
 
   const handleDeleteReview = async (reviewId) => {
     if (deletingId) return;
@@ -83,7 +83,7 @@ const OwnerReviews = () => {
     if (user) {
       fetchOwnerReviews();
     }
-  }, [user]);
+  }, [user, fetchOwnerReviews]);
 
   const filteredReviews = useMemo(() => {
     const kw = searchKeyword.trim().toLowerCase();

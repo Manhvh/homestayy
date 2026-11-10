@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Title from "../../components/Title";
 import Pagination from "../../components/Pagination";
 import { assets } from "../../assets/assets";
@@ -26,7 +26,7 @@ const Dashboard = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const token = await getToken();
@@ -44,7 +44,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [axios, getToken, toast]);
 
   // Partner Approve or Cancel booking
   const handleUpdateStatus = async (bookingId, status) => {
@@ -100,7 +100,7 @@ const Dashboard = () => {
     if (user) {
       fetchDashboardData();
     }
-  }, [user]);
+  }, [user, fetchDashboardData]);
 
   const pendingCount = dashboardData.bookings.filter(b => b.status === "pending").length;
 

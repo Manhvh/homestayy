@@ -199,7 +199,7 @@ export const AppProvider = ({ children }) => {
     };
 
     // Native Logout
-    const logout = () => {
+    const logout = useCallback(() => {
         authSessionRef.current += 1;
         setToken('');
         setUser(null);
@@ -211,10 +211,10 @@ export const AppProvider = ({ children }) => {
         localStorage.removeItem('user');
         toast.success('Đã đăng xuất.');
         navigate('/');
-    };
+    }, [navigate]);
 
     // Function to fetch room details with optional query filters
-    const fetchRooms = async (params = {}) => {
+    const fetchRooms = useCallback(async (params = {}) => {
         try {
             const { data } = await axios.get('/api/rooms', { params });
             if (data.success) {
@@ -227,10 +227,10 @@ export const AppProvider = ({ children }) => {
                 toast.error('Lỗi khi tải danh sách phòng: ' + error.message);
             }
         }
-    };
+    }, []);
 
     // Function to fetch categories (amenities & cities)
-    const fetchCategories = async () => {
+    const fetchCategories = useCallback(async () => {
         try {
             const { data } = await axios.get('/api/categories');
             if (data.success) {
@@ -244,10 +244,10 @@ export const AppProvider = ({ children }) => {
         } catch (error) {
             console.log('Categories fetch error:', error.message);
         }
-    };
+    }, []);
 
     // Function to synchronize current user details
-    const fetchCurrentUser = async () => {
+    const fetchCurrentUser = useCallback(async () => {
         const sessionAtStart = authSessionRef.current;
         const savedToken = localStorage.getItem('token');
         if (!savedToken) {
@@ -298,7 +298,7 @@ export const AppProvider = ({ children }) => {
                 setUserRole('user');
             }
         }
-    };
+    }, [navigate, logout]);
 
     // Update current user profile
     const updateUserProfile = async (formDataOrObject) => {
@@ -391,7 +391,7 @@ export const AppProvider = ({ children }) => {
         fetchRooms();
         fetchCategories();
         fetchCurrentUser();
-    }, []);
+    }, [fetchRooms, fetchCategories, fetchCurrentUser]);
 
     const value = {
         currency,

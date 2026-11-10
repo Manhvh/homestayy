@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Title from '../../components/Title';
 import Pagination from '../../components/Pagination';
 import { useAppContext } from '../../context/AppContext';
+import { getAvatarUrl } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 10;
@@ -13,7 +14,7 @@ const AdminUsers = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         try {
             setLoading(true);
             const token = await getToken();
@@ -29,7 +30,7 @@ const AdminUsers = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [axios, getToken]);
 
     const handleRoleChange = async (userId, newRole) => {
         try {
@@ -67,7 +68,7 @@ const AdminUsers = () => {
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [fetchUsers]);
 
     const filteredUsers = useMemo(() => users.filter(u =>
         u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,71 +124,74 @@ const AdminUsers = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {paginatedUsers.map((user) => (
-                                    <tr key={user._id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center gap-3">
-                                                <img
-                                                    src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.username || 'User')}`}
-                                                    alt="avatar"
-                                                    className="w-9 h-9 rounded-full object-cover border border-gray-200"
-                                                />
-                                                <div>
-                                                    <p className="font-semibold text-gray-900">{user.username}</p>
-                                                    {user.hotel && (
-                                                        <span className="text-[10px] text-blue-600 font-medium">
-                                                            Chủ homestay: {user.hotel.name}
-                                                        </span>
-                                                    )}
+                                {paginatedUsers.map((user) => {
+                                    const userId = user.id || user._id;
+                                    return (
+                                        <tr key={userId} className="hover:bg-gray-50 transition-colors">
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center gap-3">
+                                                    <img
+                                                        src={getAvatarUrl(user)}
+                                                        alt="avatar"
+                                                        className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                                                    />
+                                                    <div>
+                                                        <p className="font-semibold text-gray-900">{user.username}</p>
+                                                        {user.hotel && (
+                                                            <span className="text-[10px] text-blue-600 font-medium">
+                                                                Chủ homestay: {user.hotel.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
+                                            </td>
 
-                                        <td className="py-3 px-4 text-xs">
-                                            <p className="font-medium text-gray-800">{user.email}</p>
-                                            <p className="text-[11px] text-gray-500 mt-0.5">
-                                                SĐT: <span className={user.phone ? "text-blue-600 font-medium" : "text-gray-400"}>{user.phone || "Chưa cập nhật"}</span>
-                                            </p>
-                                        </td>
+                                            <td className="py-3 px-4 text-xs">
+                                                <p className="font-medium text-gray-800">{user.email}</p>
+                                                <p className="text-[11px] text-gray-500 mt-0.5">
+                                                    SĐT: <span className={user.phone ? "text-blue-600 font-medium" : "text-gray-400"}>{user.phone || "Chưa cập nhật"}</span>
+                                                </p>
+                                            </td>
 
-                                        <td className="py-3 px-4 text-center">
-                                            <select
-                                                value={user.role}
-                                                onChange={e => handleRoleChange(user._id, e.target.value)}
-                                                className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white text-gray-700 outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer shadow-2xs"
-                                            >
-                                                <option value="user">Khách hàng</option>
-                                                <option value="hotelOwner">Chủ homestay</option>
-                                                <option value="admin">Admin</option>
-                                            </select>
-                                        </td>
+                                            <td className="py-3 px-4 text-center">
+                                                <select
+                                                    value={user.role}
+                                                    onChange={e => handleRoleChange(userId, e.target.value)}
+                                                    className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white text-gray-700 outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer shadow-2xs"
+                                                >
+                                                    <option value="user">Khách hàng</option>
+                                                    <option value="hotelOwner">Chủ homestay</option>
+                                                    <option value="admin">Admin</option>
+                                                </select>
+                                            </td>
 
-                                        <td className="py-3 px-4 text-center font-bold text-gray-800">
-                                            {user.bookingCount || 0}
-                                        </td>
+                                            <td className="py-3 px-4 text-center font-bold text-gray-800">
+                                                {user.bookingCount || 0}
+                                            </td>
 
-                                        <td className="py-3 px-4 text-center">
-                                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                                user.isBlocked ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
-                                            }`}>
-                                                {user.isBlocked ? "Đã khóa" : "Hoạt động"}
-                                            </span>
-                                        </td>
+                                            <td className="py-3 px-4 text-center">
+                                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                                    user.isBlocked ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                                                }`}>
+                                                    {user.isBlocked ? "Đã khóa" : "Hoạt động"}
+                                                </span>
+                                            </td>
 
-                                        <td className="py-3 px-4 text-center">
-                                            <button
-                                                onClick={() => handleToggleBlock(user._id)}
-                                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
-                                                    user.isBlocked
-                                                        ? "bg-green-600 hover:bg-green-700 text-white"
-                                                        : "border border-red-200 text-red-600 hover:bg-red-50"
-                                                }`}
-                                            >
-                                                {user.isBlocked ? "Mở khóa" : "Khóa tài khoản"}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            <td className="py-3 px-4 text-center">
+                                                <button
+                                                    onClick={() => handleToggleBlock(userId)}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                                                        user.isBlocked
+                                                            ? "bg-green-600 hover:bg-green-700 text-white"
+                                                            : "border border-red-200 text-red-600 hover:bg-red-50"
+                                                    }`}
+                                                >
+                                                    {user.isBlocked ? "Mở khóa" : "Khóa tài khoản"}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

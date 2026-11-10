@@ -4,6 +4,7 @@ import { assets, facilityIcons, roomCommonData } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
 import Pagination from "../components/Pagination";
 import HotelCard from "../components/HotelCard";
+import BookingModal from "../components/BookingModal";
 import toast from "react-hot-toast";
 
 const REVIEW_PAGE_SIZE = 10;
@@ -13,9 +14,9 @@ const RoomDetails = () => {
   const [searchParams] = useSearchParams();
   const { rooms, getToken, axios, navigate, user, currency, openLoginModal, searchDates, setSearchDates } = useAppContext();
 
-  const initialCheckIn = searchParams.get('checkIn') || searchDates?.checkIn || '';
-  const initialCheckOut = searchParams.get('checkOut') || searchDates?.checkOut || '';
-  const initialGuests = Number(searchParams.get('guests') || searchDates?.guests || 1);
+  const initialCheckIn = searchParams.get("checkIn") || searchDates?.checkIn || "";
+  const initialCheckOut = searchParams.get("checkOut") || searchDates?.checkOut || "";
+  const initialGuests = Number(searchParams.get("guests") || searchDates?.guests || 1);
 
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,9 +28,9 @@ const RoomDetails = () => {
 
   // Sync checkInDate, checkOutDate, guests when URL searchParams or searchDates change
   useEffect(() => {
-    const urlCheckIn = searchParams.get('checkIn') || searchDates?.checkIn || '';
-    const urlCheckOut = searchParams.get('checkOut') || searchDates?.checkOut || '';
-    const urlGuests = Number(searchParams.get('guests') || searchDates?.guests || 1);
+    const urlCheckIn = searchParams.get("checkIn") || searchDates?.checkIn || "";
+    const urlCheckOut = searchParams.get("checkOut") || searchDates?.checkOut || "";
+    const urlGuests = Number(searchParams.get("guests") || searchDates?.guests || 1);
 
     if (urlCheckIn) setCheckInDate(urlCheckIn);
     if (urlCheckOut) setCheckOutDate(urlCheckOut);
@@ -157,7 +158,6 @@ const RoomDetails = () => {
     try {
       setLoading(true);
 
-      // 1. Try finding in context rooms first
       const found = rooms.find(
         (r) => String(r.id) === String(id) || String(r._id) === String(id)
       );
@@ -171,7 +171,6 @@ const RoomDetails = () => {
         return;
       }
 
-      // 2. If not found in context (e.g. direct URL, refresh, or date-filtered out), fetch from backend API
       const { data } = await axios.get(`/api/rooms/${id}`);
       if (data.success && data.room) {
         setRoom(data.room);
@@ -449,9 +448,8 @@ const RoomDetails = () => {
           </div>
         </div>
 
-        {/* Rating & Verified Badge (Phần bôi đỏ được cải thiện tinh tế & đồng bộ) */}
+        {/* Verified Badge */}
         <div className="flex items-center gap-2.5 self-start lg:self-center bg-white border border-gray-200 rounded-2xl p-2 sm:px-3.5 sm:py-2.5 shadow-xs">
-          {/* Verified Badge */}
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold whitespace-nowrap">
             <svg className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -506,7 +504,7 @@ const RoomDetails = () => {
           <p className="text-xs text-blue-700 uppercase font-semibold mb-1">Giá tiêu chuẩn</p>
           <div className="flex items-baseline gap-1">
             <span className="text-3xl font-extrabold text-gray-900">
-              {Number(room.pricePerNight).toLocaleString('vi-VN')} {currency}
+              {Number(room.pricePerNight).toLocaleString("vi-VN")} {currency}
             </span>
             <span className="text-gray-500 text-sm">/ đêm</span>
           </div>
@@ -519,7 +517,7 @@ const RoomDetails = () => {
                 <div key={idx} className="flex justify-between text-gray-600 py-0.5">
                   <span>{s.name}:</span>
                   <strong className="text-gray-900">
-                    {Number(s.pricePerNight).toLocaleString('vi-VN')} {currency} / đêm
+                    {Number(s.pricePerNight).toLocaleString("vi-VN")} {currency} / đêm
                   </strong>
                 </div>
               ))}
@@ -546,7 +544,7 @@ const RoomDetails = () => {
         </div>
       </div>
 
-      {/* About Homestay & Local Experience (Homestay.com inspired) */}
+      {/* About Homestay & Local Experience */}
       <div className="mt-10 p-6 md:p-8 bg-white rounded-2xl border border-gray-200 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-xl font-bold font-playfair text-gray-900">
@@ -600,7 +598,7 @@ const RoomDetails = () => {
         </div>
       </div>
 
-      {/* Hosted By (Enhanced Homestay.com Host Profile Card) */}
+      {/* Hosted By */}
       <div className="my-10 p-6 md:p-8 bg-gradient-to-br from-gray-50 via-white to-blue-50/40 border border-gray-200 rounded-2xl shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start sm:items-center gap-4">
@@ -739,56 +737,56 @@ const RoomDetails = () => {
                 .slice((reviewPage - 1) * REVIEW_PAGE_SIZE, reviewPage * REVIEW_PAGE_SIZE)
                 .map((rev) => {
                   const revId = rev._id || rev.id;
-              const canDelete =
-                user &&
-                (String(user.id) === String(rev.userId) ||
-                  String(user.id) === String(hotelInfo.ownerId) ||
-                  String(user.id) === String(hotelInfo.owner?.id) ||
-                  user.role === "admin");
+                  const canDelete =
+                    user &&
+                    (String(user.id) === String(rev.userId) ||
+                      String(user.id) === String(hotelInfo.ownerId) ||
+                      String(user.id) === String(hotelInfo.owner?.id) ||
+                      user.role === "admin");
 
-              return (
-                <div key={revId} className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={rev.user?.image || assets.userIcon}
-                        alt="User"
-                        className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                      />
-                      <div>
-                        <p className="font-semibold text-sm text-gray-800">{rev.user?.username || "Khách hàng"}</p>
-                        <p className="text-xs text-gray-400">{new Date(rev.createdAt).toLocaleDateString()}</p>
+                  return (
+                    <div key={revId} className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={rev.user?.image || assets.userIcon}
+                            alt="User"
+                            className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                          />
+                          <div>
+                            <p className="font-semibold text-sm text-gray-800">{rev.user?.username || "Khách hàng"}</p>
+                            <p className="text-xs text-gray-400">{new Date(rev.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center text-amber-400">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={i < rev.rating ? "text-amber-400" : "text-gray-300"}>
+                                ★
+                              </span>
+                            ))}
+                          </div>
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteReview(revId)}
+                              className="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 px-2.5 py-1 rounded-lg font-medium transition cursor-pointer"
+                            >
+                              Xóa
+                            </button>
+                          )}
+                        </div>
                       </div>
+                      <p className="text-sm text-gray-700 mt-2 leading-relaxed">{rev.comment}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center text-amber-400">
-                        {[...Array(5)].map((_, i) => (
-                          <span key={i} className={i < rev.rating ? "text-amber-400" : "text-gray-300"}>
-                            ★
-                          </span>
-                        ))}
-                      </div>
-                      {canDelete && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteReview(revId)}
-                          className="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 px-2.5 py-1 rounded-lg font-medium transition cursor-pointer"
-                        >
-                          Xóa
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-700 mt-2 leading-relaxed">{rev.comment}</p>
-                </div>
-              );
-            })}
-            <Pagination
-              currentPage={reviewPage}
-              totalItems={reviews.length}
-              pageSize={REVIEW_PAGE_SIZE}
-              onPageChange={setReviewPage}
-            />
+                  );
+                })}
+              <Pagination
+                currentPage={reviewPage}
+                totalItems={reviews.length}
+                pageSize={REVIEW_PAGE_SIZE}
+                onPageChange={setReviewPage}
+              />
             </>
           )}
         </div>
@@ -818,8 +816,8 @@ const RoomDetails = () => {
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {similarRooms.map((item, idx) => (
-              <HotelCard key={item.id || item._id} room={item} index={idx} />
+            {similarRooms.map((item) => (
+              <HotelCard key={item.id || item._id} room={item} />
             ))}
           </div>
         </div>
@@ -830,7 +828,7 @@ const RoomDetails = () => {
         <div>
           <p className="text-xs text-gray-500">Giá phòng</p>
           <p className="text-base font-bold text-gray-900">
-            {Number(room.pricePerNight).toLocaleString('vi-VN')} {currency}
+            {Number(room.pricePerNight).toLocaleString("vi-VN")} {currency}
             <span className="text-xs font-normal text-gray-500">/đêm</span>
           </p>
         </div>
@@ -845,268 +843,32 @@ const RoomDetails = () => {
       </div>
 
       {/* Booking & Availability Popup Modal */}
-      {showBookingModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all"
-          onClick={closeModal}
-        >
-          <div
-            className="relative bg-white rounded-3xl shadow-2xl border border-gray-100 w-full max-w-lg max-h-[92vh] overflow-y-auto p-6 md:p-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={closeModal}
-              disabled={isLoading || isBooking}
-              className="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center transition cursor-pointer font-bold text-base"
-              title="Đóng (Esc)"
-            >
-              ✕
-            </button>
-
-            {/* Modal Header */}
-            <div className="pr-10 mb-5">
-              <div className="text-blue-600 font-semibold text-xs tracking-wider uppercase mb-1">
-                Kiểm tra lịch trống & Đặt phòng
-              </div>
-              <h2 className="text-2xl font-bold font-playfair text-gray-900">
-                {room.roomType}
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                <span className="font-medium text-gray-700">{hotelInfo.name || "Homestay"}</span>
-                {hotelInfo.city && <span> • {hotelInfo.city}</span>}
-              </p>
-            </div>
-
-            {/* Unauthenticated notice inside modal if accessed */}
-            {!user && (
-              <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-3 text-xs text-amber-800">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Bạn cần đăng nhập tài khoản trước khi hoàn tất đặt phòng.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeModal();
-                    openLoginModal();
-                  }}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs whitespace-nowrap transition-colors cursor-pointer"
-                >
-                  Đăng nhập ngay
-                </button>
-              </div>
-            )}
-
-            {/* Price Preview Card */}
-            <div className="bg-blue-50/70 border border-blue-200/60 rounded-2xl p-4 mb-5 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-blue-700 font-medium mb-0.5">Giá tiêu chuẩn</p>
-                <p className="text-xl font-extrabold text-gray-900">
-                  {Number(room.pricePerNight).toLocaleString('vi-VN')} {currency}{" "}
-                  <span className="text-xs font-normal text-gray-500">/ đêm</span>
-                </p>
-              </div>
-              <span className="text-xs font-semibold px-3 py-1 bg-green-100 text-green-700 rounded-full border border-green-200">
-                Thanh toán tại chỗ
-              </span>
-            </div>
-
-            {/* Seasonal pricing info if available inside modal */}
-            {room.seasonalPricing && room.seasonalPricing.length > 0 && (
-              <div className="mb-5 p-3.5 bg-amber-50/60 border border-amber-200/70 rounded-xl text-xs">
-                <p className="font-semibold text-amber-900 mb-1.5">
-                  Bảng giá theo mùa / dịp lễ:
-                </p>
-                <div className="space-y-1">
-                  {room.seasonalPricing.map((s, idx) => (
-                    <div key={idx} className="flex justify-between text-gray-600">
-                      <span>{s.name} ({s.startDate} đến {s.endDate}):</span>
-                      <strong className="text-gray-900">
-                        {Number(s.pricePerNight).toLocaleString('vi-VN')} {currency}/đêm
-                      </strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={onSubmitHandler} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="min-w-0">
-                  <label htmlFor="modalCheckInDate" className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
-                    Ngày nhận phòng *
-                  </label>
-                  <input
-                    type="date"
-                    id="modalCheckInDate"
-                    min={new Date().toISOString().split("T")[0]}
-                    value={checkInDate}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCheckInDate(val);
-                      const nextCheckOut = checkOutDate && val && checkOutDate <= val ? "" : checkOutDate;
-                      if (nextCheckOut !== checkOutDate) setCheckOutDate(nextCheckOut);
-                      setSearchDates({ checkIn: val, checkOut: nextCheckOut });
-                      setIsAvailable(false);
-                    }}
-                    required
-                    className="w-full min-w-0 max-w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition appearance-none"
-                  />
-                </div>
-
-                <div className="min-w-0">
-                  <label htmlFor="modalCheckOutDate" className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
-                    Ngày trả phòng *
-                  </label>
-                  <input
-                    type="date"
-                    id="modalCheckOutDate"
-                    min={checkInDate || new Date().toISOString().split("T")[0]}
-                    value={checkOutDate}
-                    disabled={!checkInDate}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCheckOutDate(val);
-                      setSearchDates({ checkOut: val });
-                      setIsAvailable(false);
-                    }}
-                    required
-                    className="w-full min-w-0 max-w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition appearance-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="modalGuests" className="block text-xs font-bold text-gray-700 uppercase tracking-wide">
-                    Số lượng khách *
-                  </label>
-                  <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                    Giới hạn: Tối đa {room?.maxGuests || 2} người
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    id="modalGuests"
-                    min="1"
-                    max={room?.maxGuests || 2}
-                    value={guests}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value) || 1;
-                      const maxLimit = room?.maxGuests || 2;
-                      if (val > maxLimit) {
-                        toast.error(`Phòng này chỉ phục vụ tối đa ${maxLimit} khách.`);
-                        setGuests(maxLimit);
-                        setSearchDates({ guests: maxLimit });
-                      } else {
-                        const nextG = Math.max(1, val);
-                        setGuests(nextG);
-                        setSearchDates({ guests: nextG });
-                      }
-                    }}
-                    required
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  />
-                  <span className="text-xs text-gray-500 whitespace-nowrap">người</span>
-                </div>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  Đã bao gồm người lớn & trẻ em theo quy định của homestay.
-                </p>
-              </div>
-
-              {/* Nights & Estimated Price Summary */}
-              {numberOfNights > 0 && (
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-2 mt-4 text-xs">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Thời gian lưu trú:</span>
-                    <strong className="text-gray-900">{numberOfNights} đêm</strong>
-                  </div>
-                  {nightlyBreakdown.length <= 7 && (
-                    <div className="py-1.5 border-y border-gray-200/80 space-y-1 max-h-32 overflow-y-auto">
-                      {nightlyBreakdown.map((n, idx) => (
-                        <div key={idx} className="flex justify-between text-[11px] text-gray-500">
-                          <span>
-                            Đêm {idx + 1} ({n.dateStr} - {n.seasonName}):
-                          </span>
-                          <span className="font-semibold text-gray-700">
-                            {n.nightRate.toLocaleString("vi-VN")} {currency}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex justify-between text-gray-600">
-                    <span>Hình thức thanh toán:</span>
-                    <strong className="text-gray-900">Thanh toán tại homestay</strong>
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-200 flex justify-between items-baseline text-sm">
-                    <span className="font-bold text-gray-800">Tổng thanh toán:</span>
-                    <span className="text-lg font-extrabold text-blue-600">
-                      {estimatedTotal.toLocaleString('vi-VN')} {currency}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Availability feedback */}
-              {isAvailable && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs font-medium">
-                  Phòng đang còn trống trong thời gian này! Bạn có thể bấm Đặt phòng ngay.
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="pt-4 flex flex-col-reverse sm:flex-row gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={isLoading || isBooking}
-                  className="w-full sm:w-1/3 px-5 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
-                >
-                  Đóng
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading || isCheckingAvailability || isBooking || isBooked}
-                  className={`w-full sm:w-2/3 px-6 py-3 rounded-xl font-bold text-white text-sm transition-all shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                    isBooked
-                      ? "bg-green-600"
-                      : isLoading || isBooking
-                      ? "bg-blue-500"
-                      : isAvailable
-                      ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 animate-pulse"
-                      : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"
-                  }`}
-                >
-                  {(isLoading || isBooking || isCheckingAvailability) && (
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                  )}
-                  {!user ? (
-                    <span>Đăng nhập để đặt phòng</span>
-                  ) : isBooked ? (
-                    <span>Đã đặt phòng thành công! Đang chuyển hướng...</span>
-                  ) : isLoading || isBooking ? (
-                    <span>Đang xử lý đặt phòng...</span>
-                  ) : isCheckingAvailability ? (
-                    <span>Đang kiểm tra lịch trống...</span>
-                  ) : isAvailable ? (
-                    <span>Xác nhận đặt phòng ngay</span>
-                  ) : (
-                    <span>Kiểm tra lịch phòng trống</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <BookingModal
+        isOpen={showBookingModal}
+        onClose={closeModal}
+        room={room}
+        hotelInfo={hotelInfo}
+        user={user}
+        currency={currency}
+        openLoginModal={openLoginModal}
+        checkInDate={checkInDate}
+        setCheckInDate={setCheckInDate}
+        checkOutDate={checkOutDate}
+        setCheckOutDate={setCheckOutDate}
+        guests={guests}
+        setGuests={setGuests}
+        setSearchDates={setSearchDates}
+        isAvailable={isAvailable}
+        setIsAvailable={setIsAvailable}
+        isCheckingAvailability={isCheckingAvailability}
+        isLoading={isLoading}
+        isBooking={isBooking}
+        isBooked={isBooked}
+        numberOfNights={numberOfNights}
+        nightlyBreakdown={nightlyBreakdown}
+        estimatedTotal={estimatedTotal}
+        onSubmitHandler={onSubmitHandler}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Title from '../../components/Title';
 import Pagination from '../../components/Pagination';
 import { useAppContext } from '../../context/AppContext';
@@ -14,7 +14,7 @@ const AdminHotels = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
 
-    const fetchHotels = async () => {
+    const fetchHotels = useCallback(async () => {
         try {
             setLoading(true);
             const token = await getToken();
@@ -30,7 +30,7 @@ const AdminHotels = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [axios, getToken]);
 
     const handleUpdateStatus = async (hotelId, status) => {
         try {
@@ -51,7 +51,7 @@ const AdminHotels = () => {
 
     useEffect(() => {
         fetchHotels();
-    }, []);
+    }, [fetchHotels]);
 
     const filteredHotels = useMemo(() => hotels.filter(h => {
         if (filterStatus === 'all') return true;

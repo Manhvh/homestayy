@@ -136,7 +136,7 @@ const AllRooms = () => {
     if (dateFilters.checkIn) params.checkIn = dateFilters.checkIn;
     if (dateFilters.checkOut) params.checkOut = dateFilters.checkOut;
     fetchRooms(params);
-  }, [destinationQuery, dateFilters.checkIn, dateFilters.checkOut]);
+  }, [destinationQuery, dateFilters.checkIn, dateFilters.checkOut, fetchRooms]);
 
   // Handle filter changes
   const handleFilterChange = (checked, value, type) => {
@@ -155,60 +155,64 @@ const AllRooms = () => {
     setSelectedSort(sortOption);
   };
 
-  // Matches Room Type
-  const matchesRoomType = (room) => {
-    if (selectedFilters.roomType.length === 0) return true;
-    return selectedFilters.roomType.some(val => room.roomType === val || room.roomType?.toLowerCase().includes(val.toLowerCase()));
-  };
-
-  // Matches Price Range via horizontal slider and quick brackets
-  const matchesPriceRange = (room) => {
-    const p = Number(room.pricePerNight) || 0;
-    return p >= minPrice && p <= maxPrice;
-  };
-
-  // Matches Amenities
-  const matchesAmenities = (room) => {
-    if (selectedFilters.amenities.length === 0) return true;
-    return selectedFilters.amenities.every(amenity => room.amenities && room.amenities.includes(amenity));
-  };
-
-  // Sort
-  const sortRooms = (a, b) => {
-    if (selectedSort === 'price_asc') return a.pricePerNight - b.pricePerNight;
-    if (selectedSort === 'price_desc') return b.pricePerNight - a.pricePerNight;
-    if (selectedSort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
-    return 0;
-  };
-
-  // Filter Destination / Address
-  const filterDestination = (room) => {
-    const query = (addressSearch || destinationQuery || '').trim().toLowerCase();
-    if (!query) return true;
-    return (
-      (room.hotel?.address && room.hotel.address.toLowerCase().includes(query)) ||
-      (room.hotel?.city && room.hotel.city.toLowerCase().includes(query)) ||
-      (room.hotel?.name && room.hotel.name.toLowerCase().includes(query))
-    );
-  };
-
-  // Matches Capacity / Number of Guests
-  const matchesGuests = (room) => {
-    if (!guestsFilter) return true;
-    return (room.maxGuests || 2) >= Number(guestsFilter);
-  };
-
-  // Matches Favorites
-  const matchesFavorites = (room) => {
-    if (!onlyFavorites) return true;
-    return isFavoriteRoom(room.id || room._id);
-  };
-
   const filteredRooms = useMemo(() => {
+    const query = (addressSearch || destinationQuery || '').trim().toLowerCase();
+
     return rooms
-      .filter(room => matchesRoomType(room) && matchesPriceRange(room) && matchesAmenities(room) && filterDestination(room) && matchesGuests(room) && matchesFavorites(room))
-      .sort(sortRooms);
-  }, [rooms, selectedFilters, selectedSort, destinationQuery, addressSearch, minPrice, maxPrice, guestsFilter, onlyFavorites, favoriteRoomIds]);
+      .filter((room) => {
+        if (selectedFilters.roomType.length > 0) {
+          const matchesType = selectedFilters.roomType.some(
+            (val) => room.roomType === val || room.roomType?.toLowerCase().includes(val.toLowerCase())
+          );
+          if (!matchesType) return false;
+        }
+
+        const price = Number(room.pricePerNight) || 0;
+        if (price < minPrice || price > maxPrice) return false;
+
+        if (selectedFilters.amenities.length > 0) {
+          const hasAllAmenities = selectedFilters.amenities.every(
+            (amenity) => room.amenities && room.amenities.includes(amenity)
+          );
+          if (!hasAllAmenities) return false;
+        }
+
+        if (query) {
+          const matchesDest =
+            (room.hotel?.address && room.hotel.address.toLowerCase().includes(query)) ||
+            (room.hotel?.city && room.hotel.city.toLowerCase().includes(query)) ||
+            (room.hotel?.name && room.hotel.name.toLowerCase().includes(query));
+          if (!matchesDest) return false;
+        }
+
+        if (guestsFilter && (room.maxGuests || 2) < Number(guestsFilter)) {
+          return false;
+        }
+
+        if (onlyFavorites && !isFavoriteRoom(room.id || room._id)) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (selectedSort === 'price_asc') return a.pricePerNight - b.pricePerNight;
+        if (selectedSort === 'price_desc') return b.pricePerNight - a.pricePerNight;
+        if (selectedSort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+        return 0;
+      });
+  }, [
+    rooms,
+    selectedFilters,
+    selectedSort,
+    destinationQuery,
+    addressSearch,
+    minPrice,
+    maxPrice,
+    guestsFilter,
+    onlyFavorites,
+    isFavoriteRoom,
+  ]);
 
   useEffect(() => {
     setCurrentPage(1);

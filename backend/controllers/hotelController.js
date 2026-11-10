@@ -3,36 +3,37 @@ import { Hotel, User } from "../models/index.js";
 export const registerHotel = async (req, res) => {
     try {
         if (!req.user) {
-            return res.status(401).json({ success: false, message: "User not authenticated" });
+            return res.status(401).json({ success: false, message: "Vui lòng đăng nhập để đăng ký homestay." });
         }
 
         const { name, address, contact, city, description } = req.body;
         const ownerId = req.user.id;
 
         if (!name || !address || !contact || !city) {
-            return res.status(400).json({ success: false, message: "All fields are required" });
+            return res.status(400).json({ success: false, message: "Vui lòng điền đầy đủ thông tin bắt buộc." });
         }
 
         const existingHotel = await Hotel.findOne({ where: { ownerId } });
 
         if (existingHotel) {
-            return res.json({ success: false, message: "Hotel Already Registered" });
+            return res.status(400).json({ success: false, message: "Tài khoản này đã đăng ký homestay rồi." });
         }
 
         const hotel = await Hotel.create({
-            name,
-            address,
-            contact,
-            city,
-            description: description || "",
+            name: name.trim(),
+            address: address.trim(),
+            contact: contact.trim(),
+            city: city.trim(),
+            description: description ? description.trim() : "",
             ownerId,
             status: "pending",
         });
 
-        await User.update({ role: "hotelOwner" }, { where: { id: ownerId } });
+        if (req.user.role !== "admin") {
+            await User.update({ role: "hotelOwner" }, { where: { id: ownerId } });
+        }
 
-        res.json({ success: true, message: "Hotel Registered Successfully", hotel });
-
+        res.json({ success: true, message: "Đăng ký homestay thành công!", hotel });
     } catch (error) {
         console.error("Hotel registration error:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -63,10 +64,10 @@ export const updateMyHotel = async (req, res) => {
             return res.status(404).json({ success: false, message: "Không tìm thấy homestay của bạn." });
         }
 
-        if (name) hotel.name = name;
-        if (address) hotel.address = address;
-        if (contact) hotel.contact = contact;
-        if (city) hotel.city = city;
+        if (name) hotel.name = name.trim();
+        if (address) hotel.address = address.trim();
+        if (contact) hotel.contact = contact.trim();
+        if (city) hotel.city = city.trim();
         if (description !== undefined) hotel.description = description;
         if (image !== undefined) hotel.image = image;
 

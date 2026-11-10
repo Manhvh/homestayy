@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import User from '../models/User.js';
-import transporter from '../configs/nodemailer.js';
-import { hashPassword, verifyPassword, generateToken } from '../utils/authUtils.js';
+import { hashPassword, verifyPassword, generateToken, validatePasswordStrength } from '../utils/authUtils.js';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/mailService.js';
 
 // Store pending verification codes by email: Map<email, { code, expiresAt }>
 const pendingVerifyCodes = new Map();
@@ -21,33 +21,10 @@ export const sendVerifyCode = async (req, res) => {
         }
 
         const code = String(Math.floor(100000 + Math.random() * 900000));
-        const expiresAt = Date.now() + 9 * 60 * 1000;
+        const expiresAt = Date.now() + 60 * 1000;
         pendingVerifyCodes.set(cleanEmail, { code, expiresAt });
 
-        let mailSent = false;
-        if (process.env.SENDER_EMAIL && process.env.SMTP_USER && process.env.SMTP_PASS) {
-            try {
-                await transporter.sendMail({
-                    from: process.env.SENDER_EMAIL,
-                    to: cleanEmail,
-                    subject: 'HomeStay - Mã xác thực đăng ký tài khoản',
-                    html: `
-                        <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 500px; margin: auto; border: 1px solid #e5e7eb; border-radius: 12px;">
-                            <h2 style="color: #1d4ed8; margin-top: 0;">Xác thực tài khoản HomeStay</h2>
-                            <p>Xin chào <strong>${username || cleanEmail}</strong>,</p>
-                            <p>Mã xác thực để hoàn tất đăng ký tài khoản của bạn là:</p>
-                            <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e40af; background: #eff6ff; padding: 14px 20px; text-align: center; border-radius: 8px; margin: 16px 0;">
-                                ${code}
-                            </div>
-                            <p style="font-size: 12px; color: #6b7280;">Mã có hiệu lực trong vòng 1 phút.</p>
-                        </div>
-                    `,
-                });
-                mailSent = true;
-            } catch (mailError) {
-                console.warn("Send verify code email skipped:", mailError.message);
-            }
-        }
+        const mailSent = await sendVerificationEmail({ email: cleanEmail, username, code });
 
         res.json({
             success: true,
@@ -72,8 +49,9 @@ export const register = async (req, res) => {
             return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ tên, email và mật khẩu." });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ success: false, message: "Mật khẩu phải chứa ít nhất 6 ký tự." });
+        const passValidation = validatePasswordStrength(password);
+        if (!passValidation.valid) {
+            return res.status(400).json({ success: false, message: passValidation.message });
         }
 
         if (!codeVerify || !String(codeVerify).trim()) {
@@ -104,7 +82,6 @@ export const register = async (req, res) => {
         const userId = `user_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
         const hashedPassword = hashPassword(password);
         // Public registration can only register as 'user' or 'hotelOwner'.
-        // Admin accounts can only be activated from within the admin dashboard.
         const userRole = role === "hotelOwner" ? "hotelOwner" : "user";
 
         const newUser = await User.create({
@@ -204,36 +181,13 @@ export const sendResetCode = async (req, res) => {
         }
 
         const code = String(Math.floor(100000 + Math.random() * 900000));
-        const expiresAt = Date.now() + 10 * 60 * 1000;
+        const expiresAt = Date.now() + 60 * 1000;
         pendingVerifyCodes.set(`reset_${cleanEmail}`, { code, expiresAt });
 
         user.codeVerify = code;
         await user.save();
 
-        let mailSent = false;
-        if (process.env.SENDER_EMAIL && process.env.SMTP_USER && process.env.SMTP_PASS) {
-            try {
-                await transporter.sendMail({
-                    from: process.env.SENDER_EMAIL,
-                    to: cleanEmail,
-                    subject: 'HomeStay - Mã xác thực đặt lại mật khẩu',
-                    html: `
-                        <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 500px; margin: auto; border: 1px solid #e5e7eb; border-radius: 12px;">
-                            <h2 style="color: #1d4ed8; margin-top: 0;">Đặt lại mật khẩu HomeStay</h2>
-                            <p>Xin chào <strong>${user.username || cleanEmail}</strong>,</p>
-                            <p>Mã xác thực để đặt lại mật khẩu tài khoản của bạn là:</p>
-                            <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e40af; background: #eff6ff; padding: 14px 20px; text-align: center; border-radius: 8px; margin: 16px 0;">
-                                ${code}
-                            </div>
-                            <p style="font-size: 12px; color: #6b7280;">Mã có hiệu lực trong vòng 10 phút.</p>
-                        </div>
-                    `,
-                });
-                mailSent = true;
-            } catch (mailError) {
-                console.warn("Send reset password email skipped:", mailError.message);
-            }
-        }
+        const mailSent = await sendPasswordResetEmail({ email: cleanEmail, username: user.username, code });
 
         res.json({
             success: true,
@@ -257,8 +211,9 @@ export const resetPassword = async (req, res) => {
             return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ email, mã xác thực và mật khẩu mới." });
         }
 
-        if (newPassword.length < 6) {
-            return res.status(400).json({ success: false, message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
+        const passValidation = validatePasswordStrength(newPassword);
+        if (!passValidation.valid) {
+            return res.status(400).json({ success: false, message: passValidation.message });
         }
 
         const cleanEmail = email.toLowerCase().trim();
@@ -297,8 +252,13 @@ export const resetPassword = async (req, res) => {
 export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
-        if (!newPassword || newPassword.length < 6) {
-            return res.status(400).json({ success: false, message: "Mật khẩu mới phải chứa ít nhất 6 ký tự." });
+        const passValidation = validatePasswordStrength(newPassword);
+        if (!passValidation.valid) {
+            return res.status(400).json({ success: false, message: passValidation.message });
+        }
+
+        if (currentPassword && currentPassword === newPassword) {
+            return res.status(400).json({ success: false, message: "Mật khẩu mới không được trùng với mật khẩu hiện tại." });
         }
 
         const user = await User.findByPk(req.user.id);

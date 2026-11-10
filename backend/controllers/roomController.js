@@ -1,5 +1,20 @@
 import { Op } from "sequelize";
 import { Hotel, Room, Booking, User, Review } from "../models/index.js";
+import { getUploadedFileUrl } from "../middleware/uploadMiddleware.js";
+
+const parseJsonList = (value, fallback = []) => {
+    if (!value) return fallback;
+    if (Array.isArray(value)) return value;
+    if (typeof value === "string") {
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : fallback;
+        } catch {
+            return value.split(",").map((s) => s.trim()).filter(Boolean);
+        }
+    }
+    return fallback;
+};
 
 // API to create a new room for a hotel
 export const createRoom = async (req, res) => {
@@ -7,42 +22,26 @@ export const createRoom = async (req, res) => {
         const { roomType, pricePerNight, amenities, seasonalPricing, maxGuests } = req.body;
 
         const hotel = await Hotel.findOne({ where: { ownerId: req.user.id } });
-
-        if (!hotel) return res.status(404).json({ success: false, message: "Không tìm thấy homestay của bạn!" });
-
-        // Save local uploads if files exist
-        let images = [];
-        if (req.files && req.files.length > 0) {
-            const backendUrl =
-                process.env.BACKEND_URL ||
-                process.env.RENDER_EXTERNAL_URL ||
-                `${req.protocol}://${req.get("host")}`;
-            images = req.files.map(file => `${backendUrl}/uploads/${file.filename}`);
+        if (!hotel) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy homestay của bạn!" });
         }
 
-        // Parse seasonal pricing if provided
-        let parsedSeasonal = [];
-        if (seasonalPricing) {
-            try {
-                parsedSeasonal = typeof seasonalPricing === "string" ? JSON.parse(seasonalPricing) : seasonalPricing;
-            } catch (e) {
-                parsedSeasonal = [];
-            }
-        }
+        const images = Array.isArray(req.files)
+            ? req.files.map((file) => getUploadedFileUrl(req, file.filename))
+            : [];
 
         const room = await Room.create({
             hotelId: hotel.id,
             roomType,
             pricePerNight: +pricePerNight,
-            maxGuests: maxGuests ? Math.max(1, parseInt(maxGuests)) : 2,
-            amenities: typeof amenities === "string" ? JSON.parse(amenities) : amenities,
-            seasonalPricing: parsedSeasonal,
+            maxGuests: maxGuests ? Math.max(1, parseInt(maxGuests, 10)) : 2,
+            amenities: parseJsonList(amenities),
+            seasonalPricing: parseJsonList(seasonalPricing),
             images,
             isAvailable: true,
         });
 
         res.json({ success: true, message: "Tạo phòng thành công!", room });
-
     } catch (error) {
         console.error("Create room error:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -54,7 +53,7 @@ export const getRooms = async (req, res) => {
     try {
         const { checkIn, checkOut, destination, guests } = req.query;
 
-        let whereClause = { isAvailable: true };
+        const whereClause = { isAvailable: true };
 
         // Filter by capacity (max guests room can accommodate)
         if (guests && !isNaN(Number(guests)) && Number(guests) > 0) {
@@ -76,7 +75,7 @@ export const getRooms = async (req, res) => {
                     attributes: ["roomId"],
                 });
 
-                const bookedRoomIds = conflictingBookings.map(b => b.roomId);
+                const bookedRoomIds = conflictingBookings.map((b) => b.roomId);
                 if (bookedRoomIds.length > 0) {
                     whereClause.id = { [Op.notIn]: bookedRoomIds };
                 }
@@ -107,7 +106,7 @@ export const getRooms = async (req, res) => {
         // Filter destination if requested
         if (destination) {
             const dest = destination.toLowerCase();
-            rooms = rooms.filter(r =>
+            rooms = rooms.filter((r) =>
                 (r.hotel?.city && r.hotel.city.toLowerCase().includes(dest)) ||
                 (r.hotel?.address && r.hotel.address.toLowerCase().includes(dest)) ||
                 (r.hotel?.name && r.hotel.name.toLowerCase().includes(dest))
@@ -115,8 +114,8 @@ export const getRooms = async (req, res) => {
         }
 
         // Attach real averageRating & reviewCount from Reviews table
-        const hotelIds = [...new Set(rooms.map(r => r.hotelId).filter(Boolean))];
-        let reviewsByHotel = {};
+        const hotelIds = [...new Set(rooms.map((r) => r.hotelId).filter(Boolean))];
+        const reviewsByHotel = {};
         if (hotelIds.length > 0) {
             const allReviews = await Review.findAll({
                 where: { hotelId: { [Op.in]: hotelIds } },
@@ -131,7 +130,7 @@ export const getRooms = async (req, res) => {
             }
         }
 
-        const roomsWithRatings = rooms.map(r => {
+        const roomsWithRatings = rooms.map((r) => {
             const plain = r.toJSON();
             const ratings = reviewsByHotel[plain.hotelId] || [];
             const reviewCount = ratings.length;
@@ -144,7 +143,6 @@ export const getRooms = async (req, res) => {
         });
 
         res.json({ success: true, rooms: roomsWithRatings });
-
     } catch (error) {
         console.error("Get rooms error:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -166,7 +164,6 @@ export const getOwnerRooms = async (req, res) => {
         });
 
         res.json({ success: true, rooms });
-
     } catch (error) {
         console.error("Get owner rooms error:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -191,32 +188,13 @@ export const updateRoom = async (req, res) => {
 
         if (roomType) room.roomType = roomType;
         if (pricePerNight !== undefined) room.pricePerNight = +pricePerNight;
-        if (maxGuests !== undefined) room.maxGuests = Math.max(1, parseInt(maxGuests));
+        if (maxGuests !== undefined) room.maxGuests = Math.max(1, parseInt(maxGuests, 10));
         if (isAvailable !== undefined) room.isAvailable = isAvailable === true || isAvailable === 'true';
-
-        if (amenities !== undefined) {
-            if (typeof amenities === "string") {
-                try {
-                    room.amenities = JSON.parse(amenities);
-                } catch {
-                    room.amenities = amenities.split(',').map(s => s.trim()).filter(Boolean);
-                }
-            } else {
-                room.amenities = amenities;
-            }
-        }
-
-        if (seasonalPricing !== undefined) {
-            room.seasonalPricing = typeof seasonalPricing === "string" ? JSON.parse(seasonalPricing) : seasonalPricing;
-        }
+        if (amenities !== undefined) room.amenities = parseJsonList(amenities);
+        if (seasonalPricing !== undefined) room.seasonalPricing = parseJsonList(seasonalPricing);
 
         if (req.files && req.files.length > 0) {
-            const backendUrl =
-                process.env.BACKEND_URL ||
-                process.env.RENDER_EXTERNAL_URL ||
-                `${req.protocol}://${req.get("host")}`;
-            const uploadedUrls = req.files.map(file => `${backendUrl}/uploads/${file.filename}`);
-            room.images = uploadedUrls;
+            room.images = req.files.map((file) => getUploadedFileUrl(req, file.filename));
         }
 
         await room.save();
@@ -250,7 +228,6 @@ export const toggleRoomAvailability = async (req, res) => {
         await roomData.save();
 
         res.json({ success: true, message: "Đã cập nhật trạng thái hoạt động của phòng", isAvailable: roomData.isAvailable });
-
     } catch (error) {
         console.error("Toggle availability error:", error);
         res.status(500).json({ success: false, message: error.message });

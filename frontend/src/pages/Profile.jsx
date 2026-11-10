@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Title from '../components/Title';
 import { useAppContext } from '../context/AppContext';
+import { checkPasswordRules } from '../utils/passwordValidator';
+import { getAvatarUrl, createRandomAvatarUrl, getRoleBadgeInfo } from '../utils/formatters';
 
 const Profile = () => {
   const { user, updateUserProfile, changePassword, toast } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [changingPass, setChangingPass] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [passData, setPassData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -28,7 +31,7 @@ const Profile = () => {
         email: user.email || '',
         image: user.image || '',
       });
-      setPreviewUrl(user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.username || 'User')}`);
+      setPreviewUrl(getAvatarUrl(user));
       setImageFile(null);
     }
   }, [user]);
@@ -55,8 +58,7 @@ const Profile = () => {
   };
 
   const handleRandomAvatar = () => {
-    const randomSeed = Math.random().toString(36).substring(7);
-    const newAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`;
+    const newAvatar = createRandomAvatarUrl();
     setImageFile(null);
     setPreviewUrl(newAvatar);
     setFormData((prev) => ({ ...prev, image: newAvatar }));
@@ -91,10 +93,20 @@ const Profile = () => {
     }
   };
 
+  const passRules = checkPasswordRules(passData.newPassword);
+
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    if (!passData.newPassword || passData.newPassword.length < 6) {
-      toast.error('Mật khẩu mới phải chứa ít nhất 6 ký tự.');
+    if (!passData.currentPassword) {
+      toast.error('Vui lòng nhập mật khẩu hiện tại.');
+      return;
+    }
+    if (!passRules.isValid) {
+      toast.error(passRules.errorMessage);
+      return;
+    }
+    if (passData.currentPassword === passData.newPassword) {
+      toast.error('Mật khẩu mới không được trùng với mật khẩu hiện tại.');
       return;
     }
     if (passData.newPassword !== passData.confirmPassword) {
@@ -112,18 +124,7 @@ const Profile = () => {
     }
   };
 
-  const getRoleLabel = (role) => {
-    switch (role) {
-      case 'admin':
-        return { text: 'Quản trị viên (Admin)', bg: 'bg-rose-50 text-rose-700 border-rose-200' };
-      case 'hotelOwner':
-        return { text: 'Chủ Homestay (Partner)', bg: 'bg-purple-50 text-purple-700 border-purple-200' };
-      default:
-        return { text: 'Khách hàng', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
-    }
-  };
-
-  const roleInfo = getRoleLabel(user.role);
+  const roleInfo = getRoleBadgeInfo(user.role);
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6">
@@ -247,20 +248,29 @@ const Profile = () => {
       {/* Change Password Card */}
       <div className="mt-8 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <form onSubmit={handlePasswordChange} className="p-6 sm:p-8 space-y-5">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Đổi mật khẩu bảo mật</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Cập nhật mật khẩu định kỳ để bảo vệ an toàn cho tài khoản của bạn.
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Đổi mật khẩu bảo mật</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Cập nhật mật khẩu định kỳ để bảo vệ an toàn cho tài khoản của bạn.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPass(!showPass)}
+              className="text-xs font-medium text-blue-600 hover:text-blue-700 cursor-pointer shrink-0"
+            >
+              {showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Mật khẩu hiện tại
+                Mật khẩu hiện tại <span className="text-red-500">*</span>
               </label>
               <input
-                type="password"
+                type={showPass ? 'text' : 'password'}
                 required
                 value={passData.currentPassword}
                 onChange={(e) => setPassData({ ...passData, currentPassword: e.target.value })}
@@ -274,11 +284,11 @@ const Profile = () => {
                 Mật khẩu mới <span className="text-red-500">*</span>
               </label>
               <input
-                type="password"
+                type={showPass ? 'text' : 'password'}
                 required
                 value={passData.newPassword}
                 onChange={(e) => setPassData({ ...passData, newPassword: e.target.value })}
-                placeholder="Ít nhất 6 ký tự"
+                placeholder="Tối thiểu 8 ký tự, chữ hoa, số, ký tự ĐB"
                 className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
               />
             </div>
@@ -288,15 +298,93 @@ const Profile = () => {
                 Xác nhận mật khẩu mới <span className="text-red-500">*</span>
               </label>
               <input
-                type="password"
+                type={showPass ? 'text' : 'password'}
                 required
                 value={passData.confirmPassword}
                 onChange={(e) => setPassData({ ...passData, confirmPassword: e.target.value })}
                 placeholder="Nhập lại mật khẩu mới"
-                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                className={`w-full px-4 py-2.5 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition ${
+                  passData.confirmPassword && passData.confirmPassword !== passData.newPassword
+                    ? 'border-red-400 bg-red-50/30'
+                    : 'border-gray-300'
+                }`}
               />
+              {passData.confirmPassword && passData.confirmPassword !== passData.newPassword && (
+                <p className="text-[11px] text-red-600 mt-1 font-medium">
+                  Xác nhận mật khẩu mới chưa khớp.
+                </p>
+              )}
             </div>
           </div>
+
+          {passData.newPassword.length > 0 && (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-gray-500 font-medium">Độ mạnh mật khẩu mới:</span>
+                <span
+                  className={`font-semibold ${
+                    passRules.score <= 1
+                      ? 'text-red-600'
+                      : passRules.score === 2
+                      ? 'text-amber-600'
+                      : passRules.score === 3
+                      ? 'text-blue-600'
+                      : 'text-emerald-600'
+                  }`}
+                >
+                  {passRules.score <= 1
+                    ? 'Yếu'
+                    : passRules.score === 2
+                    ? 'Trung bình'
+                    : passRules.score === 3
+                    ? 'Khá'
+                    : 'Mạnh (Đạt chuẩn)'}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1">
+                {[1, 2, 3, 4].map((step) => (
+                  <div
+                    key={step}
+                    className={`h-1.5 rounded-full transition-all ${
+                      passRules.score >= step
+                        ? passRules.score <= 1
+                          ? 'bg-red-500'
+                          : passRules.score === 2
+                          ? 'bg-amber-500'
+                          : passRules.score === 3
+                          ? 'bg-blue-500'
+                          : 'bg-emerald-500'
+                        : 'bg-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-2 gap-y-1 pt-0.5 text-[11px]">
+                <span className={`flex items-center gap-1 ${passRules.minLength ? 'text-emerald-600 font-medium' : 'text-gray-400'}`}>
+                  <span>{passRules.minLength ? '✓' : '○'}</span> Ít nhất 8 ký tự
+                </span>
+                <span className={`flex items-center gap-1 ${passRules.hasUpperLower ? 'text-emerald-600 font-medium' : 'text-gray-400'}`}>
+                  <span>{passRules.hasUpperLower ? '✓' : '○'}</span> Chữ hoa & thường
+                </span>
+                <span className={`flex items-center gap-1 ${passRules.hasNumber ? 'text-emerald-600 font-medium' : 'text-gray-400'}`}>
+                  <span>{passRules.hasNumber ? '✓' : '○'}</span> Ít nhất 1 chữ số
+                </span>
+                <span className={`flex items-center gap-1 ${passRules.hasSpecial ? 'text-emerald-600 font-medium' : 'text-gray-400'}`}>
+                  <span>{passRules.hasSpecial ? '✓' : '○'}</span> Ký tự đặc biệt
+                </span>
+              </div>
+              {!passRules.noSpace && (
+                <p className="text-[11px] text-red-600 font-medium">
+                  ⚠ Mật khẩu không được chứa khoảng trắng.
+                </p>
+              )}
+              {passData.currentPassword && passData.currentPassword === passData.newPassword && (
+                <p className="text-[11px] text-red-600 font-medium">
+                  ⚠ Mật khẩu mới không được trùng với mật khẩu hiện tại.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="pt-3 border-t border-gray-100 flex justify-end">
             <button
