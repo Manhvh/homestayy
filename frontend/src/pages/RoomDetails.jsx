@@ -11,18 +11,33 @@ const REVIEW_PAGE_SIZE = 10;
 const RoomDetails = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const initialCheckIn = searchParams.get('checkIn') || '';
-  const initialCheckOut = searchParams.get('checkOut') || '';
+  const { rooms, getToken, axios, navigate, user, currency, openLoginModal, searchDates, setSearchDates } = useAppContext();
 
-  const { rooms, getToken, axios, navigate, user, currency, openLoginModal } = useAppContext();
+  const initialCheckIn = searchParams.get('checkIn') || searchDates?.checkIn || '';
+  const initialCheckOut = searchParams.get('checkOut') || searchDates?.checkOut || '';
+  const initialGuests = Number(searchParams.get('guests') || searchDates?.guests || 1);
 
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState(null);
   const [checkInDate, setCheckInDate] = useState(initialCheckIn);
   const [checkOutDate, setCheckOutDate] = useState(initialCheckOut);
-  const [guests, setGuests] = useState(1);
+  const [guests, setGuests] = useState(initialGuests);
   const [showBookingModal, setShowBookingModal] = useState(false);
+
+  // Sync checkInDate, checkOutDate, guests when URL searchParams or searchDates change
+  useEffect(() => {
+    const urlCheckIn = searchParams.get('checkIn') || searchDates?.checkIn || '';
+    const urlCheckOut = searchParams.get('checkOut') || searchDates?.checkOut || '';
+    const urlGuests = Number(searchParams.get('guests') || searchDates?.guests || 1);
+
+    if (urlCheckIn) setCheckInDate(urlCheckIn);
+    if (urlCheckOut) setCheckOutDate(urlCheckOut);
+    if (urlGuests) {
+      const maxG = room?.maxGuests || 8;
+      setGuests(Math.min(Math.max(1, urlGuests), maxG));
+    }
+  }, [searchParams, searchDates, room?.maxGuests]);
 
   const [isAvailable, setIsAvailable] = useState(false);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
@@ -932,7 +947,11 @@ const RoomDetails = () => {
                     min={new Date().toISOString().split("T")[0]}
                     value={checkInDate}
                     onChange={(e) => {
-                      setCheckInDate(e.target.value);
+                      const val = e.target.value;
+                      setCheckInDate(val);
+                      const nextCheckOut = checkOutDate && val && checkOutDate <= val ? "" : checkOutDate;
+                      if (nextCheckOut !== checkOutDate) setCheckOutDate(nextCheckOut);
+                      setSearchDates({ checkIn: val, checkOut: nextCheckOut });
                       setIsAvailable(false);
                     }}
                     required
@@ -951,7 +970,9 @@ const RoomDetails = () => {
                     value={checkOutDate}
                     disabled={!checkInDate}
                     onChange={(e) => {
-                      setCheckOutDate(e.target.value);
+                      const val = e.target.value;
+                      setCheckOutDate(val);
+                      setSearchDates({ checkOut: val });
                       setIsAvailable(false);
                     }}
                     required
@@ -982,8 +1003,11 @@ const RoomDetails = () => {
                       if (val > maxLimit) {
                         toast.error(`Phòng này chỉ phục vụ tối đa ${maxLimit} khách.`);
                         setGuests(maxLimit);
+                        setSearchDates({ guests: maxLimit });
                       } else {
-                        setGuests(Math.max(1, val));
+                        const nextG = Math.max(1, val);
+                        setGuests(nextG);
+                        setSearchDates({ guests: nextG });
                       }
                     }}
                     required

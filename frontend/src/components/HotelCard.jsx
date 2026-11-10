@@ -4,7 +4,7 @@ import { assets } from '../assets/assets'
 import { useAppContext } from '../context/AppContext'
 
 const HotelCard = ({room, index}) => {
-  const { currency, isFavoriteRoom, toggleFavoriteRoom } = useAppContext();
+  const { currency, isFavoriteRoom, toggleFavoriteRoom, searchDates } = useAppContext();
   const roomId = room.id || room._id;
   const hotel = room.hotel || {};
   const images = Array.isArray(room.images) && room.images.length > 0 ? room.images : [assets.roomImg1];
@@ -12,8 +12,17 @@ const HotelCard = ({room, index}) => {
   const avgRating = room.averageRating ? Number(room.averageRating).toFixed(1) : "5.0";
   const revCount = room.reviewCount ?? (room.reviews?.length || 0);
 
+  const buildRoomUrl = () => {
+    const params = new URLSearchParams();
+    if (searchDates?.checkIn) params.set("checkIn", searchDates.checkIn);
+    if (searchDates?.checkOut) params.set("checkOut", searchDates.checkOut);
+    if (searchDates?.guests) params.set("guests", String(searchDates.guests));
+    const qs = params.toString();
+    return `/rooms/${roomId}${qs ? `?${qs}` : ""}`;
+  };
+
   return (
-    <Link to={'/rooms/' + roomId} onClick={() => scrollTo(0, 0)} key={roomId} 
+    <Link to={buildRoomUrl()} onClick={() => scrollTo(0, 0)} key={roomId} 
     className='group relative w-full bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-gray-200 flex flex-col'>
         {/* Mobile Design - Large Image (60-65% of card height) */}
         <div className="md:hidden">

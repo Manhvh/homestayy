@@ -37,7 +37,7 @@ const RadioButton = ({ label, selected = false, onChange = () => { } }) => {
 };
 
 const AllRooms = () => {
-  const { rooms, navigate, currency, fetchRooms, amenities: dynamicAmenities, favoriteRoomIds, isFavoriteRoom, toggleFavoriteRoom } = useAppContext();
+  const { rooms, navigate, currency, fetchRooms, amenities: dynamicAmenities, favoriteRoomIds, isFavoriteRoom, toggleFavoriteRoom, searchDates, setSearchDates } = useAppContext();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Read URL query params
@@ -54,11 +54,41 @@ const AllRooms = () => {
   }, [destinationQuery]);
 
   const [dateFilters, setDateFilters] = useState({
-    checkIn: checkInQuery,
-    checkOut: checkOutQuery,
+    checkIn: checkInQuery || searchDates?.checkIn || '',
+    checkOut: checkOutQuery || searchDates?.checkOut || '',
   });
 
   const [guestsFilter, setGuestsFilter] = useState(guestsQuery ? Number(guestsQuery) : '');
+
+  useEffect(() => {
+    if (checkInQuery || checkOutQuery || guestsQuery) {
+      setDateFilters((prev) => ({
+        checkIn: checkInQuery || prev.checkIn,
+        checkOut: checkOutQuery || prev.checkOut,
+      }));
+      if (guestsQuery) {
+        setGuestsFilter(Number(guestsQuery));
+      }
+      setSearchDates((prev) => ({
+        checkIn: checkInQuery || prev?.checkIn || '',
+        checkOut: checkOutQuery || prev?.checkOut || '',
+        guests: guestsQuery ? Number(guestsQuery) : prev?.guests || 2,
+      }));
+    }
+  }, [checkInQuery, checkOutQuery, guestsQuery, setSearchDates]);
+
+  const handleViewRoomDetails = (roomId) => {
+    const params = new URLSearchParams();
+    const ci = dateFilters.checkIn || checkInQuery || searchDates?.checkIn || '';
+    const co = dateFilters.checkOut || checkOutQuery || searchDates?.checkOut || '';
+    const g = guestsFilter || guestsQuery || searchDates?.guests || '';
+    if (ci) params.set('checkIn', ci);
+    if (co) params.set('checkOut', co);
+    if (g) params.set('guests', String(g));
+    const qs = params.toString();
+    navigate(`/rooms/${roomId}${qs ? `?${qs}` : ''}`);
+    window.scrollTo(0, 0);
+  };
 
   const [selectedFilters, setSelectedFilters] = useState({
     roomType: [],
@@ -202,6 +232,7 @@ const AllRooms = () => {
     setGuestsFilter('');
     setSelectedSort('');
     setOnlyFavorites(false);
+    setSearchDates({ checkIn: '', checkOut: '', guests: 2 });
     setSearchParams({});
   };
 
@@ -349,10 +380,7 @@ const AllRooms = () => {
                 <div className="flex flex-col lg:flex-row items-start gap-8">
                   <div className="lg:w-1/2 relative overflow-hidden rounded-2xl">
                     <img
-                      onClick={() => {
-                        navigate(`/rooms/${roomId}`);
-                        window.scrollTo(0, 0);
-                      }}
+                      onClick={() => handleViewRoomDetails(roomId)}
                       src={room.images?.[0] || assets.roomImg1}
                       alt="hotel-images"
                       title="Xem chi tiết phòng"
@@ -404,10 +432,7 @@ const AllRooms = () => {
                         <p className="text-gray-500 font-medium text-sm uppercase tracking-wide">{room.hotel?.city || "Việt Nam"}</p>
                       </div>
                       <p
-                        onClick={() => {
-                          navigate(`/rooms/${roomId}`);
-                          window.scrollTo(0, 0);
-                        }}
+                        onClick={() => handleViewRoomDetails(roomId)}
                         className="text-gray-900 text-2xl lg:text-3xl font-playfair cursor-pointer hover:text-gray-700 transition-colors duration-300 mb-2"
                       >
                         {room.hotel?.name || "Homestay"}
@@ -446,11 +471,8 @@ const AllRooms = () => {
                         <p className="text-xs text-gray-500">mỗi đêm</p>
                       </div>
                       <button
-                        onClick={() => {
-                          navigate(`/rooms/${roomId}`);
-                          window.scrollTo(0, 0);
-                        }}
-                        className="group/btn flex items-center gap-2 px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all duration-300 shadow-md hover:shadow-xl text-sm"
+                        onClick={() => handleViewRoomDetails(roomId)}
+                        className="group/btn flex items-center gap-2 px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all duration-300 shadow-md hover:shadow-xl text-sm cursor-pointer"
                       >
                         <span>Xem chi tiết</span>
                         <svg className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -520,7 +542,14 @@ const AllRooms = () => {
                     type="date"
                     value={dateFilters.checkIn}
                     min={new Date().toISOString().split("T")[0]}
-                    onChange={(e) => setDateFilters(prev => ({ ...prev, checkIn: e.target.value }))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDateFilters(prev => {
+                        const nextCheckOut = prev.checkOut && val && prev.checkOut <= val ? '' : prev.checkOut;
+                        setSearchDates({ checkIn: val, checkOut: nextCheckOut });
+                        return { checkIn: val, checkOut: nextCheckOut };
+                      });
+                    }}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs outline-none focus:border-blue-500"
                   />
                 </div>
@@ -530,7 +559,11 @@ const AllRooms = () => {
                     type="date"
                     value={dateFilters.checkOut}
                     min={dateFilters.checkIn || new Date().toISOString().split("T")[0]}
-                    onChange={(e) => setDateFilters(prev => ({ ...prev, checkOut: e.target.value }))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDateFilters(prev => ({ ...prev, checkOut: val }));
+                      setSearchDates({ checkOut: val });
+                    }}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs outline-none focus:border-blue-500"
                   />
                 </div>

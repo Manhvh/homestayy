@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import AuthModal from '../components/AuthModal.jsx';
@@ -13,12 +13,14 @@ export const AppProvider = ({ children }) => {
     const currency = import.meta.env.VITE_CURRENCY || 'VNĐ';
     const formatCurrency = (val) => `${Number(val || 0).toLocaleString('vi-VN')} ${currency}`;
     const navigate = useNavigate();
+    const authSessionRef = useRef(0);
 
     const [token, setToken] = useState(() => localStorage.getItem('token') || '');
     const savedUser = (() => {
         try {
+            const savedToken = localStorage.getItem('token');
             const saved = localStorage.getItem('user');
-            return saved ? JSON.parse(saved) : null;
+            return savedToken && saved ? JSON.parse(saved) : null;
         } catch {
             return null;
         }
@@ -32,6 +34,27 @@ export const AppProvider = ({ children }) => {
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [searchedCities, setSearchedCities] = useState([]);
+    const [searchDates, setSearchDatesState] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem('homestay_search_dates');
+            return saved ? JSON.parse(saved) : { checkIn: '', checkOut: '', guests: 2 };
+        } catch {
+            return { checkIn: '', checkOut: '', guests: 2 };
+        }
+    });
+
+    const setSearchDates = useCallback((updater) => {
+        setSearchDatesState((prev) => {
+            const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
+            try {
+                sessionStorage.setItem('homestay_search_dates', JSON.stringify(next));
+            } catch {
+                // ignore storage error
+            }
+            return next;
+        });
+    }, []);
+
     const [rooms, setRooms] = useState([]);
     const [cities, setCities] = useState([]);
     const [amenities, setAmenities] = useState([]);
@@ -82,9 +105,10 @@ export const AppProvider = ({ children }) => {
 
     // Native Login
     const login = async (email, password) => {
+        authSessionRef.current += 1;
         try {
             const { data } = await axios.post('/api/auth/login', { email, password });
-            if (data.success) {
+            if (data.success && data.token && data.user) {
                 setToken(data.token);
                 setUser(data.user);
                 setUserRole(data.user.role || 'user');
@@ -103,10 +127,24 @@ export const AppProvider = ({ children }) => {
 
                 return { success: true, role: data.user.role };
             } else {
+                setToken('');
+                setUser(null);
+                setUserRole('user');
+                setIsOwner(false);
+                setIsAdmin(false);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
                 toast.error(data.message || 'Đăng nhập thất bại.');
                 return { success: false, message: data.message };
             }
         } catch (error) {
+            setToken('');
+            setUser(null);
+            setUserRole('user');
+            setIsOwner(false);
+            setIsAdmin(false);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             const msg = error.response?.data?.message || error.message || 'Lỗi đăng nhập.';
             toast.error(msg);
             return { success: false, message: msg };
@@ -133,9 +171,10 @@ export const AppProvider = ({ children }) => {
 
     // Native Register
     const register = async (username, email, password, role = 'user', phone = '', codeVerify = '') => {
+        authSessionRef.current += 1;
         try {
             const { data } = await axios.post('/api/auth/register', { username, email, password, role, phone, codeVerify });
-            if (data.success) {
+            if (data.success && data.token && data.user) {
                 setToken(data.token);
                 setUser(data.user);
                 setUserRole(data.user.role || 'user');
@@ -161,6 +200,7 @@ export const AppProvider = ({ children }) => {
 
     // Native Logout
     const logout = () => {
+        authSessionRef.current += 1;
         setToken('');
         setUser(null);
         setUserRole('user');
@@ -208,12 +248,14 @@ export const AppProvider = ({ children }) => {
 
     // Function to synchronize current user details
     const fetchCurrentUser = async () => {
+        const sessionAtStart = authSessionRef.current;
         const savedToken = localStorage.getItem('token');
         if (!savedToken) {
             setUser(null);
             setIsOwner(false);
             setIsAdmin(false);
             setUserRole('user');
+            localStorage.removeItem('user');
             return;
         }
 
@@ -221,6 +263,11 @@ export const AppProvider = ({ children }) => {
             const { data } = await axios.get('/api/auth/me', {
                 headers: { Authorization: `Bearer ${savedToken}` }
             });
+
+            // Ignore stale response if user triggered login/register/logout in the meantime
+            if (sessionAtStart !== authSessionRef.current) {
+                return;
+            }
 
             if (data.success) {
                 setUser(data.user);
@@ -237,12 +284,18 @@ export const AppProvider = ({ children }) => {
                 logout();
             }
         } catch (error) {
+            if (sessionAtStart !== authSessionRef.current) {
+                return;
+            }
             console.log('Auth check error:', error.message);
             if (error.response?.status === 401 || error.response?.status === 403) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 setToken('');
                 setUser(null);
+                setIsOwner(false);
+                setIsAdmin(false);
+                setUserRole('user');
             }
         }
     };
@@ -377,6 +430,8 @@ export const AppProvider = ({ children }) => {
         setShowHotelRegistration,
         searchedCities,
         setSearchedCities,
+        searchDates,
+        setSearchDates,
         rooms,
         setRooms,
         fetchRooms,

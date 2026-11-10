@@ -3,11 +3,11 @@ import { assets, cities } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
 
 const Hero = () => {
-  const { navigate, axios, getToken, setSearchedCities, cities: dynamicCities, user } = useAppContext();
+  const { navigate, axios, getToken, setSearchedCities, cities: dynamicCities, user, searchDates, setSearchDates } = useAppContext();
   const [destination, setDestination] = useState("");
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState(2);
+  const [checkIn, setCheckIn] = useState(() => searchDates?.checkIn || "");
+  const [checkOut, setCheckOut] = useState(() => searchDates?.checkOut || "");
+  const [guests, setGuests] = useState(() => searchDates?.guests || 2);
   const [isVisible, setIsVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -33,6 +33,11 @@ const Hero = () => {
 
   const onSearch = async (e) => {
     e.preventDefault();
+    setSearchDates({
+      checkIn: checkIn || "",
+      checkOut: checkOut || "",
+      guests: Number(guests) || 2,
+    });
     const queryParams = new URLSearchParams();
     if (destination) queryParams.set("destination", destination);
     if (checkIn) queryParams.set("checkIn", checkIn);
@@ -175,7 +180,13 @@ const Hero = () => {
                   type="date"
                   value={checkIn}
                   min={new Date().toISOString().split("T")[0]}
-                  onChange={(e) => setCheckIn(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCheckIn(val);
+                    const nextCheckOut = checkOut && val && checkOut <= val ? "" : checkOut;
+                    if (nextCheckOut !== checkOut) setCheckOut(nextCheckOut);
+                    setSearchDates({ checkIn: val, checkOut: nextCheckOut });
+                  }}
                   className={`w-full min-w-0 max-w-full h-11 rounded-xl border-2 border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300 bg-white cursor-pointer appearance-none block ${
                     !checkIn ? "text-transparent sm:text-gray-700" : "text-gray-700"
                   }`}
@@ -209,7 +220,11 @@ const Hero = () => {
                   type="date"
                   value={checkOut}
                   min={checkIn || new Date().toISOString().split("T")[0]}
-                  onChange={(e) => setCheckOut(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCheckOut(val);
+                    setSearchDates({ checkOut: val });
+                  }}
                   className={`w-full min-w-0 max-w-full h-11 rounded-xl border-2 border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-300 bg-white cursor-pointer appearance-none block ${
                     !checkOut ? "text-transparent sm:text-gray-700" : "text-gray-700"
                   }`}
@@ -244,7 +259,11 @@ const Hero = () => {
               id="guests"
               type="number"
               value={guests}
-              onChange={(e) => setGuests(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setGuests(val);
+                setSearchDates({ guests: Number(val) || 1 });
+              }}
               className="w-full min-w-0 max-w-full h-11 rounded-xl border-2 border-gray-200 px-3.5 py-2.5 text-sm text-gray-700 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 bg-white"
               placeholder="2"
             />

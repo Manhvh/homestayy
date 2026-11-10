@@ -152,16 +152,12 @@ export const login = async (req, res) => {
             return res.status(403).json({ success: false, message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin." });
         }
 
-        // If user has a password set, verify it
-        if (user.password) {
-            const isMatch = verifyPassword(password, user.password);
-            if (!isMatch) {
-                return res.status(400).json({ success: false, message: "Email hoặc mật khẩu không chính xác." });
-            }
-        } else {
-            // For older accounts without password, set password on first login
-            user.password = hashPassword(password);
-            await user.save();
+        if (!user.password || !verifyPassword(password, user.password)) {
+            return res.status(400).json({ success: false, message: "Email hoặc mật khẩu không chính xác." });
+        }
+
+        if (!user.codeVerify) {
+            return res.status(403).json({ success: false, message: "Tài khoản chưa được xác thực. Vui lòng xác thực email trước khi đăng nhập." });
         }
 
         const token = generateToken(user.id, user.role);

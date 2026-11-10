@@ -97,33 +97,6 @@ const AuthModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Quick Demo Login helper for presentation/evaluation
-  const handleQuickDemo = async (demoRole) => {
-    setLoading(true);
-    try {
-      const demoAccounts = {
-        user: { email: 'khachhang@homestay.vn', password: 'password123', name: 'Nguyễn Văn Khách' },
-        hotelOwner: { email: 'chubay@homestay.vn', password: 'password123', name: 'Trần Văn Chủ Nhà' },
-        admin: { email: 'admin@homestay.vn', password: 'password123', name: 'Quản Trị Viên' },
-      };
-
-      const account = demoAccounts[demoRole];
-      let res = await login(account.email, account.password);
-      
-      // If demo account doesn't exist yet, auto register it with verification code
-      if (!res.success) {
-        const codeRes = await sendVerifyCode(account.email, account.name);
-        res = await register(account.name, account.email, account.password, demoRole, '', codeRes.verifyCode || '');
-      }
-
-      if (res.success) {
-        onClose();
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
       <div 
@@ -341,42 +314,6 @@ const AuthModal = ({ isOpen, onClose }) => {
               </div>
             )}
           </form>
-
-          {/* Quick Demo Buttons for Evaluators */}
-          <div className="mt-6 pt-5 border-t border-gray-100">
-            <p className="text-xs text-center text-gray-400 font-medium mb-3">
-              Đăng nhập nhanh
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('user')}
-                disabled={loading}
-                className="py-1.5 px-2 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 text-gray-700 rounded-lg text-xs font-medium transition cursor-pointer"
-                title="Đăng nhập tài khoản khách hàng mẫu"
-              >
-                Khách hàng
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('hotelOwner')}
-                disabled={loading}
-                className="py-1.5 px-2 bg-gray-100 hover:bg-purple-50 hover:text-purple-700 text-gray-700 rounded-lg text-xs font-medium transition cursor-pointer"
-                title="Đăng nhập tài khoản chủ homestay mẫu"
-              >
-                Chủ nhà
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('admin')}
-                disabled={loading}
-                className="py-1.5 px-2 bg-gray-100 hover:bg-rose-50 hover:text-rose-700 text-gray-700 rounded-lg text-xs font-medium transition cursor-pointer"
-                title="Đăng nhập tài khoản Quản trị viên mẫu"
-              >
-                Quản trị viên
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
