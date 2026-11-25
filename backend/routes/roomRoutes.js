@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, optionalProtect } from "../middleware/authMiddleware.js";
+import { protect, optionalProtect, ownerProtect } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
 import {
     createRoom,
@@ -14,11 +14,11 @@ import {
 const roomRouter = express.Router();
 
 roomRouter.get("/", getRooms);
-roomRouter.get("/owner", protect, getOwnerRooms);
+roomRouter.get("/owner", protect, ownerProtect, getOwnerRooms);
 roomRouter.get("/:id", optionalProtect, getRoomById);
-roomRouter.post("/", protect, upload.array("images", 4), createRoom);
-roomRouter.put("/:id", protect, upload.array("images", 4), updateRoom);
-roomRouter.delete("/:id", protect, deleteRoom);
-roomRouter.post("/toggle-availability", protect, toggleRoomAvailability);
+roomRouter.post("/", protect, ownerProtect, upload.array("images", 4), createRoom);
+roomRouter.put("/:id", protect, ownerProtect, upload.array("images", 4), updateRoom);
+roomRouter.delete("/:id", protect, ownerProtect, deleteRoom);
+roomRouter.post("/toggle-availability", protect, ownerProtect, toggleRoomAvailability);
 
 export default roomRouter;

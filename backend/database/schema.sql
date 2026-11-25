@@ -18,11 +18,15 @@ CREATE TABLE IF NOT EXISTS `users` (
     `image` TEXT NULL,
     `role` ENUM('user', 'hotelOwner', 'admin') DEFAULT 'user',
     `isBlocked` BOOLEAN DEFAULT FALSE,
+    `isVerified` BOOLEAN NOT NULL DEFAULT TRUE,
     `codeVerify` VARCHAR(50) DEFAULT NULL,
+    `resetOtpHash` VARCHAR(255) DEFAULT NULL,
+    `resetOtpExpiresAt` DATETIME DEFAULT NULL,
     `recentSearchedCities` JSON DEFAULT (JSON_ARRAY()),
     `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_users_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 2. Bảng Homestay / Khách sạn (Hotels)
@@ -35,10 +39,13 @@ CREATE TABLE IF NOT EXISTS `hotels` (
     `description` TEXT,
     `image` TEXT,
     `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    `rejectionReason` TEXT DEFAULT NULL,
     `ownerId` VARCHAR(255) NOT NULL,
     `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
+    KEY `idx_hotels_status_city` (`status`, `city`),
+    KEY `idx_hotels_owner` (`ownerId`),
     CONSTRAINT `fk_hotels_owner` FOREIGN KEY (`ownerId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -56,6 +63,7 @@ CREATE TABLE IF NOT EXISTS `rooms` (
     `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
+    KEY `idx_rooms_hotel_available` (`hotelId`, `isAvailable`),
     CONSTRAINT `fk_rooms_hotel` FOREIGN KEY (`hotelId`) REFERENCES `hotels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -74,11 +82,16 @@ CREATE TABLE IF NOT EXISTS `bookings` (
     `isPaid` BOOLEAN NOT NULL DEFAULT FALSE,
     `paidAt` DATETIME DEFAULT NULL,
     `transactionRef` VARCHAR(100) DEFAULT NULL,
+    `refundStatus` ENUM('none', 'pending', 'refunded') NOT NULL DEFAULT 'none',
     `isSendMail` BOOLEAN DEFAULT FALSE,
-    `bookingCode` VARCHAR(255) NOT NULL,
+    `bookingCode` VARCHAR(50) NOT NULL,
     `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
+    KEY `idx_bookings_room_status_dates` (`roomId`, `status`, `checkInDate`, `checkOutDate`),
+    KEY `idx_bookings_hotel_status` (`hotelId`, `status`),
+    KEY `idx_bookings_user` (`userId`),
+    KEY `idx_bookings_txn_ref` (`transactionRef`),
     CONSTRAINT `fk_bookings_user` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT `fk_bookings_room` FOREIGN KEY (`roomId`) REFERENCES `rooms` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT `fk_bookings_hotel` FOREIGN KEY (`hotelId`) REFERENCES `hotels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
@@ -98,9 +111,11 @@ CREATE TABLE IF NOT EXISTS `reviews` (
     `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
+    KEY `idx_reviews_hotel_rating` (`hotelId`, `rating`),
     CONSTRAINT `fk_reviews_user` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT `fk_reviews_hotel` FOREIGN KEY (`hotelId`) REFERENCES `hotels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT `fk_reviews_room` FOREIGN KEY (`roomId`) REFERENCES `rooms` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT `fk_reviews_room` FOREIGN KEY (`roomId`) REFERENCES `rooms` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT `fk_reviews_booking` FOREIGN KEY (`bookingId`) REFERENCES `bookings` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Bảng danh mục tiện ích & khu vực (Categories)

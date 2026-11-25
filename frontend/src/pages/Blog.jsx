@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
 
 const BLOG_POSTS = [
   {
@@ -114,7 +113,6 @@ const Blog = () => {
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeArticle, setActiveArticle] = useState(null);
-  const [emailSub, setEmailSub] = useState("");
 
   const filteredPosts = useMemo(() => {
     return BLOG_POSTS.filter((post) => {
@@ -128,16 +126,6 @@ const Blog = () => {
   }, [selectedCategory, searchQuery]);
 
   const featuredPost = BLOG_POSTS[0];
-
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-    if (!emailSub.trim() || !emailSub.includes("@")) {
-      toast.error("Vui lòng nhập địa chỉ email hợp lệ!");
-      return;
-    }
-    toast.success("Đăng ký nhận bản tin thành công! Cảm ơn bạn.");
-    setEmailSub("");
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 pt-28 pb-20 px-4 md:px-12 lg:px-20">

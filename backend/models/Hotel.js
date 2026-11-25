@@ -35,6 +35,11 @@ const Hotel = sequelize.define("Hotel", {
         type: DataTypes.ENUM("pending", "approved", "rejected"),
         defaultValue: "pending",
     },
+    rejectionReason: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+    },
     ownerId: {
         type: DataTypes.STRING(255),
         allowNull: false,
@@ -42,6 +47,16 @@ const Hotel = sequelize.define("Hotel", {
 }, {
     tableName: "hotels",
     timestamps: true,
+    indexes: [
+        {
+            name: "idx_hotels_status_city",
+            fields: ["status", "city"],
+        },
+        {
+            name: "idx_hotels_owner",
+            fields: ["ownerId"],
+        },
+    ],
 });
 
 Hotel.prototype.toJSON = function () {

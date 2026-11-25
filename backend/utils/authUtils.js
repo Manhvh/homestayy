@@ -78,7 +78,7 @@ export const generateToken = (userId, role = 'user') => {
 };
 
 /**
- * Verify and decode HMAC-SHA256 JWT
+ * Verify and decode HMAC-SHA256 JWT using constant-time signature comparison
  */
 export const verifyToken = (token) => {
     try {
@@ -87,11 +87,20 @@ export const verifyToken = (token) => {
         if (parts.length !== 3) return null;
 
         const [header, payload, signature] = parts;
+        const headerObj = JSON.parse(base64UrlDecode(header));
+        if (!headerObj || headerObj.alg !== 'HS256' || headerObj.typ !== 'JWT') {
+            return null;
+        }
+
         const expectedSig = crypto.createHmac('sha256', JWT_SECRET)
                                   .update(`${header}.${payload}`)
                                   .digest('base64url');
 
-        if (signature !== expectedSig) return null;
+        const sigBuf = Buffer.from(signature, 'utf8');
+        const expectedBuf = Buffer.from(expectedSig, 'utf8');
+        if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+            return null;
+        }
 
         const data = JSON.parse(base64UrlDecode(payload));
         if (data.exp && data.exp < Math.floor(Date.now() / 1000)) {
@@ -100,5 +109,28 @@ export const verifyToken = (token) => {
         return data;
     } catch {
         return null;
+    }
+};
+
+/**
+ * Hash an OTP code using HMAC-SHA256 keyed with JWT_SECRET so plain OTPs are never stored in DB
+ */
+export const hashOtp = (otp) => {
+    return crypto.createHmac('sha256', JWT_SECRET).update(String(otp).trim()).digest('hex');
+};
+
+/**
+ * Constant-time verification of an OTP code against a stored hash
+ */
+export const verifyOtpHash = (otp, storedHash) => {
+    if (!otp || !storedHash) return false;
+    try {
+        const computed = hashOtp(otp);
+        const a = Buffer.from(computed, 'hex');
+        const b = Buffer.from(String(storedHash), 'hex');
+        if (a.length !== b.length) return false;
+        return crypto.timingSafeEqual(a, b);
+    } catch {
+        return false;
     }
 };

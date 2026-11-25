@@ -5,6 +5,7 @@ import { useAppContext } from "../context/AppContext";
 import Pagination from "../components/Pagination";
 import HotelCard from "../components/HotelCard";
 import BookingModal from "../components/BookingModal";
+import { parseLocalDateOnly, formatLocalDateYMD, getLocalTodayYMD } from "../utils/formatters";
 import toast from "react-hot-toast";
 
 const REVIEW_PAGE_SIZE = 10;
@@ -75,30 +76,30 @@ const RoomDetails = () => {
     };
   }, [showBookingModal, closeModal]);
 
-  // Calculate number of nights
+  // Calculate number of nights using local calendar dates (no UTC shift)
   const numberOfNights = useMemo(() => {
-    if (!checkInDate || !checkOutDate) return 0;
-    const start = new Date(checkInDate);
-    const end = new Date(checkOutDate);
-    const diff = end - start;
-    if (diff <= 0) return 0;
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    const start = parseLocalDateOnly(checkInDate);
+    const end = parseLocalDateOnly(checkOutDate);
+    if (!start || !end || end <= start) return 0;
+    return Math.round((end - start) / (1000 * 60 * 60 * 24));
   }, [checkInDate, checkOutDate]);
 
   // Calculate estimated total & nightly breakdown taking into account seasonal pricing
   const nightlyBreakdown = useMemo(() => {
     if (!room || numberOfNights <= 0) return [];
     const list = [];
-    const start = new Date(checkInDate);
+    const start = parseLocalDateOnly(checkInDate);
+    if (!start) return [];
     for (let i = 0; i < numberOfNights; i++) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split("T")[0];
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      const dateStr = formatLocalDateYMD(d);
       let nightRate = Number(room.pricePerNight) || 0;
       let seasonName = "Giá tiêu chuẩn";
       if (room.seasonalPricing && Array.isArray(room.seasonalPricing)) {
         for (const s of room.seasonalPricing) {
-          if (dateStr >= s.startDate && dateStr <= s.endDate) {
+          const sStart = formatLocalDateYMD(s.startDate);
+          const sEnd = formatLocalDateYMD(s.endDate);
+          if (sStart && sEnd && dateStr >= sStart && dateStr <= sEnd) {
             nightRate = Number(s.pricePerNight) || nightRate;
             seasonName = s.name || "Giá theo mùa";
             break;
@@ -237,7 +238,7 @@ const RoomDetails = () => {
         return;
       }
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalTodayYMD();
       if (checkInDate < today) {
         toast.error("Ngày nhận phòng không thể ở quá khứ!");
         setIsCheckingAvailability(false);
@@ -427,7 +428,7 @@ const RoomDetails = () => {
     }
   };
 
-  // Delete review (allowed for review author, hotel owner, or admin)
+  // Delete review (allowed only for review author or Admin)
   const handleDeleteReview = async (reviewId) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa đánh giá này không?")) return;
     try {
@@ -514,14 +515,20 @@ const RoomDetails = () => {
           </div>
         </div>
 
-        {/* Verified Badge */}
+        {/* Homestay Verification Status Badge */}
         <div className="flex items-center gap-2.5 self-start lg:self-center bg-white border border-gray-200 rounded-2xl p-2 sm:px-3.5 sm:py-2.5 shadow-xs">
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold whitespace-nowrap">
-            <svg className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            <span>Đã xác minh</span>
-          </div>
+          {isHotelApproved ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold whitespace-nowrap">
+              <svg className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span>Đã xác minh</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-semibold whitespace-nowrap">
+              <span>{hotelInfo.status === "rejected" ? "Bị từ chối" : "Chờ phê duyệt"}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -702,11 +709,26 @@ const RoomDetails = () => {
                 Đơn vị quản lý: {hotelInfo.name || "Homestay"} • {hotelInfo.city || "Việt Nam"}
               </p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 mt-2">
-                <span>Tỷ lệ phản hồi: <strong className="text-gray-800">100%</strong></span>
-                <span>•</span>
-                <span>Thời gian phản hồi: <strong className="text-gray-800">Trong vòng 1 giờ</strong></span>
-                <span>•</span>
-                <span>Ngôn ngữ: <strong className="text-gray-800">Tiếng Việt, English</strong></span>
+                {totalReviews > 0 ? (
+                  <>
+                    <span>
+                      Tỷ lệ phản hồi đánh giá:{" "}
+                      <strong className="text-gray-800">
+                        {Math.round(
+                          (reviews.filter((r) => Boolean(r.ownerReply)).length / totalReviews) * 100
+                        )}
+                        %
+                      </strong>
+                    </span>
+                    <span>•</span>
+                    <span>
+                      Đánh giá trung bình:{" "}
+                      <strong className="text-amber-600">★ {averageRating} / 5</strong> ({totalReviews} lượt)
+                    </span>
+                  </>
+                ) : (
+                  <span>Chủ nhà mới tham gia hệ thống HomeStay</span>
+                )}
               </div>
             </div>
           </div>
@@ -740,10 +762,18 @@ const RoomDetails = () => {
               Đánh giá từ khách hàng ({totalReviews})
             </h2>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-2xl font-extrabold text-amber-500">
-                ★ {averageRating > 0 ? averageRating : "5.0"}
-              </span>
-              <span className="text-gray-500 text-sm">trên 5 sao</span>
+              {totalReviews > 0 ? (
+                <>
+                  <span className="text-2xl font-extrabold text-amber-500">
+                    ★ {averageRating}
+                  </span>
+                  <span className="text-gray-500 text-sm">trên 5 sao</span>
+                </>
+              ) : (
+                <span className="text-sm font-medium text-gray-500">
+                  Chưa có đánh giá nào từ khách lưu trú
+                </span>
+              )}
             </div>
           </div>
         </div>

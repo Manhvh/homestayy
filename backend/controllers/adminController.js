@@ -1,6 +1,7 @@
 import { fn, col } from "sequelize";
 import { User, Hotel, Room, Booking, Review } from "../models/index.js";
 import { buildLast6MonthsRevenue } from "../utils/statsUtils.js";
+import { expireStaleVnpayBookings } from "./bookingController.js";
 
 // GET /api/admin/users
 export const getAllUsers = async (req, res) => {
@@ -108,15 +109,14 @@ export const toggleUserBlock = async (req, res) => {
 // GET /api/admin/hotels
 export const getAllHotels = async (req, res) => {
     try {
-        const [hotels, roomCounts, bookingCounts] = await Promise.all([
+        const [hotels, allRooms, bookingCounts] = await Promise.all([
             Hotel.findAll({
-                include: [{ model: User, as: "owner", attributes: ["id", "username", "email", "image"] }],
+                include: [{ model: User, as: "owner", attributes: ["id", "username", "email", "phone", "image"] }],
                 order: [["createdAt", "DESC"]],
             }),
             Room.findAll({
-                attributes: ["hotelId", [fn("COUNT", col("id")), "count"]],
-                group: ["hotelId"],
-                raw: true,
+                attributes: ["id", "hotelId", "roomType", "pricePerNight", "maxGuests", "isAvailable", "images", "amenities"],
+                order: [["createdAt", "DESC"]],
             }),
             Booking.findAll({
                 attributes: ["hotelId", [fn("COUNT", col("id")), "count"]],
@@ -125,18 +125,28 @@ export const getAllHotels = async (req, res) => {
             }),
         ]);
 
-        const roomCountMap = new Map(
-            roomCounts.map((row) => [row.hotelId, Number(row.count) || 0])
-        );
+        const roomsByHotelMap = new Map();
+        for (const room of allRooms) {
+            const plain = room.toJSON();
+            if (!roomsByHotelMap.has(plain.hotelId)) {
+                roomsByHotelMap.set(plain.hotelId, []);
+            }
+            roomsByHotelMap.get(plain.hotelId).push(plain);
+        }
+
         const bookingCountMap = new Map(
             bookingCounts.map((row) => [row.hotelId, Number(row.count) || 0])
         );
 
-        const hotelsWithRooms = hotels.map((h) => ({
-            ...h.toJSON(),
-            roomCount: roomCountMap.get(h.id) || 0,
-            bookingCount: bookingCountMap.get(h.id) || 0,
-        }));
+        const hotelsWithRooms = hotels.map((h) => {
+            const hotelRooms = roomsByHotelMap.get(h.id) || [];
+            return {
+                ...h.toJSON(),
+                rooms: hotelRooms,
+                roomCount: hotelRooms.length,
+                bookingCount: bookingCountMap.get(h.id) || 0,
+            };
+        });
 
         res.json({ success: true, hotels: hotelsWithRooms });
     } catch (error) {
@@ -149,7 +159,7 @@ export const getAllHotels = async (req, res) => {
 export const updateHotelStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, rejectionReason } = req.body;
 
         if (!["pending", "approved", "rejected"].includes(status)) {
             return res.status(400).json({ success: false, message: "Trạng thái không hợp lệ." });
@@ -161,6 +171,11 @@ export const updateHotelStatus = async (req, res) => {
         }
 
         hotel.status = status;
+        if (status === "rejected") {
+            hotel.rejectionReason = rejectionReason ? String(rejectionReason).trim() : null;
+        } else {
+            hotel.rejectionReason = null;
+        }
         await hotel.save();
 
         res.json({ success: true, message: `Đã cập nhật trạng thái homestay thành: ${status}`, hotel });
@@ -173,6 +188,7 @@ export const updateHotelStatus = async (req, res) => {
 // GET /api/admin/stats
 export const getAdminStats = async (req, res) => {
     try {
+        await expireStaleVnpayBookings();
         const [
             totalUsers,
             totalOwners,

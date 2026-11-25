@@ -236,17 +236,28 @@ const ListRoom = () => {
 
   // Add seasonal pricing block in Add Modal
   const handleAddSeason = () => {
-    if (!newSeason.name || !newSeason.startDate || !newSeason.endDate || !newSeason.pricePerNight) {
+    if (!newSeason.name.trim() || !newSeason.startDate || !newSeason.endDate || !newSeason.pricePerNight) {
       toast.error('Vui lòng điền đủ tên mùa/đợt, ngày bắt đầu, ngày kết thúc và giá!');
       return;
     }
-    if (new Date(newSeason.startDate) >= new Date(newSeason.endDate)) {
-      toast.error('Ngày bắt đầu phải trước ngày kết thúc!');
+    if (newSeason.startDate > newSeason.endDate) {
+      toast.error('Ngày bắt đầu không được sau ngày kết thúc!');
+      return;
+    }
+    if (Number(newSeason.pricePerNight) <= 0) {
+      toast.error('Giá theo mùa phải lớn hơn 0!');
+      return;
+    }
+    const overlap = addSeasonalPricing.find(
+      (s) => newSeason.startDate <= s.endDate && newSeason.endDate >= s.startDate
+    );
+    if (overlap) {
+      toast.error(`Khoảng ngày bị trùng với đợt "${overlap.name}" (${overlap.startDate} → ${overlap.endDate})!`);
       return;
     }
     setAddSeasonalPricing((prev) => [
       ...prev,
-      { ...newSeason, pricePerNight: Number(newSeason.pricePerNight) },
+      { ...newSeason, name: newSeason.name.trim(), pricePerNight: Number(newSeason.pricePerNight) },
     ]);
     setNewSeason({ name: '', startDate: '', endDate: '', pricePerNight: '' });
     toast.success('Đã thêm khoảng giá theo mùa!');
@@ -349,12 +360,24 @@ const ListRoom = () => {
       toast.error('Vui lòng điền đủ tên mùa/đợt, ngày bắt đầu, ngày kết thúc và giá!');
       return;
     }
-    if (new Date(editSeasonForm.startDate) >= new Date(editSeasonForm.endDate)) {
-      toast.error('Ngày bắt đầu phải trước ngày kết thúc!');
+    if (editSeasonForm.startDate > editSeasonForm.endDate) {
+      toast.error('Ngày bắt đầu không được sau ngày kết thúc!');
       return;
     }
     if (Number(editSeasonForm.pricePerNight) <= 0) {
       toast.error('Giá theo mùa phải lớn hơn 0!');
+      return;
+    }
+
+    const existingList = Array.isArray(editForm.seasonalPricing) ? editForm.seasonalPricing : [];
+    const overlap = existingList.find(
+      (s, i) =>
+        i !== editingSeasonIdx &&
+        editSeasonForm.startDate <= s.endDate &&
+        editSeasonForm.endDate >= s.startDate
+    );
+    if (overlap) {
+      toast.error(`Khoảng ngày bị trùng với đợt "${overlap.name}" (${overlap.startDate} → ${overlap.endDate})!`);
       return;
     }
 

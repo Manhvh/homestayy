@@ -15,6 +15,7 @@ const ManageHotel = () => {
         description: '',
         image: '',
         status: 'pending',
+        rejectionReason: '',
     });
 
     const [imageFile, setImageFile] = useState(null);
@@ -48,6 +49,7 @@ const ManageHotel = () => {
                     description: data.hotel.description || '',
                     image: data.hotel.image || '',
                     status: data.hotel.status || 'pending',
+                    rejectionReason: data.hotel.rejectionReason || '',
                 });
             } else {
                 setHasHotel(false);
@@ -113,6 +115,7 @@ const ManageHotel = () => {
                         description: data.hotel.description || '',
                         image: data.hotel.image || '',
                         status: data.hotel.status || 'pending',
+                        rejectionReason: data.hotel.rejectionReason || '',
                     });
                 }
                 setImageFile(null);
@@ -183,7 +186,7 @@ const ManageHotel = () => {
                                         ? "Đã được phê duyệt (Đang hiển thị công khai)"
                                         : hotelData.status === "pending"
                                             ? "Đang chờ Quản trị viên phê duyệt"
-                                            : "Bị từ chối (Vui lòng cập nhật lại thông tin)"}
+                                            : "Bị từ chối (Cập nhật và lưu để gửi duyệt lại)"}
                                 </span>
                             ) : (
                                 <span className="inline-block mt-1 text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">
@@ -192,6 +195,22 @@ const ManageHotel = () => {
                             )}
                         </div>
                     </div>
+
+                    {hasHotel && hotelData.status === "rejected" && (
+                        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+                            <p className="font-bold text-rose-900">Hồ sơ Homestay hiện đang bị từ chối phê duyệt</p>
+                            {hotelData.rejectionReason ? (
+                                <p>
+                                    <strong>Lý do từ Quản trị viên:</strong> {hotelData.rejectionReason}
+                                </p>
+                            ) : (
+                                <p>Vui lòng rà soát lại hình ảnh, địa chỉ và thông tin liên hệ của Homestay.</p>
+                            )}
+                            <p className="text-[11px] text-rose-700">
+                                Khi bạn bấm <strong>Lưu & gửi duyệt lại</strong>, trạng thái hồ sơ sẽ tự động chuyển về <strong>Chờ duyệt</strong>.
+                            </p>
+                        </div>
+                    )}
 
                     {/* Ảnh đại diện Homestay */}
                     <div className="space-y-3">
@@ -333,9 +352,11 @@ const ManageHotel = () => {
                     >
                         {saving
                             ? "Đang lưu thay đổi..."
-                            : hasHotel
-                                ? "Lưu cập nhật"
-                                : "Tạo hồ sơ Homestay"}
+                            : !hasHotel
+                                ? "Tạo hồ sơ Homestay"
+                                : hotelData.status === "rejected"
+                                    ? "Lưu & gửi duyệt lại"
+                                    : "Lưu cập nhật"}
                     </button>
                 </form>
             )}

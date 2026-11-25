@@ -1,10 +1,22 @@
 import crypto from 'crypto';
 import User from '../models/User.js';
-import { hashPassword, verifyPassword, generateToken, validatePasswordStrength } from '../utils/authUtils.js';
+import {
+    hashPassword,
+    verifyPassword,
+    generateToken,
+    validatePasswordStrength,
+    hashOtp,
+    verifyOtpHash,
+} from '../utils/authUtils.js';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/mailService.js';
 
-// Store pending verification codes by email: Map<email, { code, expiresAt }>
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_OTP_ATTEMPTS = 5;
+
+// Store pending registration OTP codes by email: Map<email, { codeHash, expiresAt, attempts }>
 const pendingVerifyCodes = new Map();
+// Track failed reset OTP attempts in memory per email: Map<email, number>
+const resetOtpAttempts = new Map();
 
 // POST /api/auth/send-verify-code
 export const sendVerifyCode = async (req, res) => {
@@ -20,9 +32,13 @@ export const sendVerifyCode = async (req, res) => {
             return res.status(400).json({ success: false, message: "Email này đã được sử dụng. Vui lòng đăng nhập." });
         }
 
-        const code = String(Math.floor(100000 + Math.random() * 900000));
-        const expiresAt = Date.now() + 60 * 1000;
-        pendingVerifyCodes.set(cleanEmail, { code, expiresAt });
+        const code = String(crypto.randomInt(100000, 1000000));
+        const expiresAt = Date.now() + OTP_TTL_MS;
+        pendingVerifyCodes.set(cleanEmail, {
+            codeHash: hashOtp(code),
+            expiresAt,
+            attempts: 0,
+        });
 
         const mailSent = await sendVerificationEmail({ email: cleanEmail, username, code });
 
@@ -30,8 +46,8 @@ export const sendVerifyCode = async (req, res) => {
             success: true,
             mailSent,
             message: mailSent
-                ? `Đã gửi mã xác thực tới email ${cleanEmail}!`
-                : `Mã xác thực của bạn là: ${code}`,
+                ? `Đã gửi mã xác thực tới email ${cleanEmail}! (Có hiệu lực trong 5 phút)`
+                : `Mã xác thực của bạn là: ${code} (Có hiệu lực trong 5 phút)`,
         };
         if (!mailSent) {
             responsePayload.verifyCode = code;
@@ -78,7 +94,15 @@ export const register = async (req, res) => {
             pendingVerifyCodes.delete(cleanEmail);
             return res.status(400).json({ success: false, message: "Mã xác thực đã hết hạn. Vui lòng lấy mã mới." });
         }
-        if (pending.code !== cleanCode) {
+        if (!verifyOtpHash(cleanCode, pending.codeHash)) {
+            pending.attempts += 1;
+            if (pending.attempts >= MAX_OTP_ATTEMPTS) {
+                pendingVerifyCodes.delete(cleanEmail);
+                return res.status(400).json({
+                    success: false,
+                    message: "Bạn đã nhập sai mã xác thực quá số lần cho phép. Vui lòng yêu cầu mã mới.",
+                });
+            }
             return res.status(400).json({ success: false, message: "Mã xác thực không chính xác." });
         }
         pendingVerifyCodes.delete(cleanEmail);
@@ -97,7 +121,10 @@ export const register = async (req, res) => {
             image: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username.trim())}`,
             role: userRole,
             isBlocked: false,
-            codeVerify: cleanCode,
+            isVerified: true,
+            codeVerify: null,
+            resetOtpHash: null,
+            resetOtpExpiresAt: null,
             recentSearchedCities: [],
         });
 
@@ -110,6 +137,9 @@ export const register = async (req, res) => {
             user: newUser.toJSON(),
         });
     } catch (error) {
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({ success: false, message: "Email này đã được sử dụng. Vui lòng đăng nhập." });
+        }
         console.error("Register error:", error);
         res.status(500).json({ success: false, message: error.message || "Lỗi đăng ký tài khoản." });
     }
@@ -137,7 +167,7 @@ export const login = async (req, res) => {
             return res.status(400).json({ success: false, message: "Email hoặc mật khẩu không chính xác." });
         }
 
-        if (!user.codeVerify) {
+        if (user.isVerified === false) {
             return res.status(403).json({ success: false, message: "Tài khoản chưa được xác thực. Vui lòng xác thực email trước khi đăng nhập." });
         }
 
@@ -184,12 +214,11 @@ export const sendResetCode = async (req, res) => {
             return res.status(404).json({ success: false, message: "Không tìm thấy tài khoản với địa chỉ email này." });
         }
 
-        const code = String(Math.floor(100000 + Math.random() * 900000));
-        const expiresAt = Date.now() + 60 * 1000;
-        pendingVerifyCodes.set(`reset_${cleanEmail}`, { code, expiresAt });
-
-        user.codeVerify = code;
+        const code = String(crypto.randomInt(100000, 1000000));
+        user.resetOtpHash = hashOtp(code);
+        user.resetOtpExpiresAt = new Date(Date.now() + OTP_TTL_MS);
         await user.save();
+        resetOtpAttempts.set(cleanEmail, 0);
 
         const mailSent = await sendPasswordResetEmail({ email: cleanEmail, username: user.username, code });
 
@@ -197,8 +226,8 @@ export const sendResetCode = async (req, res) => {
             success: true,
             mailSent,
             message: mailSent
-                ? `Đã gửi mã đặt lại mật khẩu tới email ${cleanEmail}!`
-                : `Mã xác thực đặt lại mật khẩu của bạn là: ${code}`,
+                ? `Đã gửi mã đặt lại mật khẩu tới email ${cleanEmail}! (Có hiệu lực trong 5 phút)`
+                : `Mã xác thực đặt lại mật khẩu của bạn là: ${code} (Có hiệu lực trong 5 phút)`,
         };
         if (!mailSent) {
             responsePayload.verifyCode = code;
@@ -232,19 +261,46 @@ export const resetPassword = async (req, res) => {
             return res.status(404).json({ success: false, message: "Không tìm thấy tài khoản với email này." });
         }
 
-        const pending = pendingVerifyCodes.get(`reset_${cleanEmail}`);
-        const isCodeValid =
-            (pending && pending.expiresAt >= Date.now() && pending.code === cleanCode) ||
-            (user.codeVerify && String(user.codeVerify).trim() === cleanCode);
-
-        if (!isCodeValid) {
-            return res.status(400).json({ success: false, message: "Mã xác thực không chính xác hoặc đã hết hạn." });
+        if (!user.resetOtpHash || !user.resetOtpExpiresAt) {
+            return res.status(400).json({
+                success: false,
+                message: "Bạn chưa yêu cầu mã đặt lại mật khẩu hoặc mã đã được sử dụng. Vui lòng lấy mã mới.",
+            });
         }
 
-        pendingVerifyCodes.delete(`reset_${cleanEmail}`);
+        if (new Date(user.resetOtpExpiresAt).getTime() < Date.now()) {
+            user.resetOtpHash = null;
+            user.resetOtpExpiresAt = null;
+            await user.save();
+            resetOtpAttempts.delete(cleanEmail);
+            return res.status(400).json({
+                success: false,
+                message: "Mã xác thực đã hết hạn. Vui lòng yêu cầu mã đặt lại mật khẩu mới.",
+            });
+        }
+
+        if (!verifyOtpHash(cleanCode, user.resetOtpHash)) {
+            const attempts = (resetOtpAttempts.get(cleanEmail) || 0) + 1;
+            if (attempts >= MAX_OTP_ATTEMPTS) {
+                user.resetOtpHash = null;
+                user.resetOtpExpiresAt = null;
+                await user.save();
+                resetOtpAttempts.delete(cleanEmail);
+                return res.status(400).json({
+                    success: false,
+                    message: "Bạn đã nhập sai mã xác thực quá 5 lần. Vui lòng yêu cầu mã mới.",
+                });
+            }
+            resetOtpAttempts.set(cleanEmail, attempts);
+            return res.status(400).json({ success: false, message: "Mã xác thực không chính xác." });
+        }
+
+        // Single-use OTP: clear immediately after verification
         user.password = hashPassword(newPassword);
-        user.codeVerify = cleanCode;
+        user.resetOtpHash = null;
+        user.resetOtpExpiresAt = null;
         await user.save();
+        resetOtpAttempts.delete(cleanEmail);
 
         res.json({
             success: true,

@@ -195,9 +195,12 @@ export const seedDatabase = async () => {
         ];
 
         const createdUsers = await User.bulkCreate(
-            usersData.map((u, idx) => ({
+            usersData.map((u) => ({
                 ...u,
-                codeVerify: u.codeVerify || String(100000 + (idx + 1) * 11111).slice(0, 6),
+                isVerified: true,
+                codeVerify: null,
+                resetOtpHash: null,
+                resetOtpExpiresAt: null,
             }))
         );
         console.log(`✅ Insert ${createdUsers.length} users.`);
@@ -644,7 +647,7 @@ export const seedDatabase = async () => {
                 bookingCode: "bk335791",
                 createdAt: today,
             },
-            // 4. Đơn VNPay chưa hoàn tất thanh toán (để khachhang@homestay.vn test nút "Thanh toán lại VNPay" và Hủy đơn)
+            // 4. Đơn chưa thanh toán (để khachhang@homestay.vn test nút "Thanh toán VNPay" và Hủy đơn)
             {
                 userId: "user_guest_01",
                 roomId: createdRooms[1].id,
@@ -654,7 +657,7 @@ export const seedDatabase = async () => {
                 totalPrice: 900000,
                 guests: 2,
                 status: "pending",
-                paymentMethod: "VNPay",
+                paymentMethod: "Pay At Hotel",
                 isPaid: false,
                 paidAt: null,
                 transactionRef: null,

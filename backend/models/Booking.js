@@ -59,6 +59,11 @@ const Booking = sequelize.define("Booking", {
         allowNull: true,
         defaultValue: null,
     },
+    refundStatus: {
+        type: DataTypes.ENUM("none", "pending", "refunded"),
+        allowNull: false,
+        defaultValue: "none",
+    },
     isSendMail: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
@@ -66,11 +71,29 @@ const Booking = sequelize.define("Booking", {
     },
     bookingCode: {
         type: DataTypes.STRING(50),
-        allowNull: true,
+        allowNull: false,
     },
 }, {
     tableName: "bookings",
     timestamps: true,
+    indexes: [
+        {
+            name: "idx_bookings_room_status_dates",
+            fields: ["roomId", "status", "checkInDate", "checkOutDate"],
+        },
+        {
+            name: "idx_bookings_hotel_status",
+            fields: ["hotelId", "status"],
+        },
+        {
+            name: "idx_bookings_user",
+            fields: ["userId"],
+        },
+        {
+            name: "idx_bookings_txn_ref",
+            fields: ["transactionRef"],
+        },
+    ],
 });
 
 Booking.prototype.toJSON = function () {

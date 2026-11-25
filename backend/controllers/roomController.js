@@ -1,6 +1,9 @@
 import { Op } from "sequelize";
 import { Hotel, Room, Booking, User, Review } from "../models/index.js";
-import { getUploadedFileUrl } from "../middleware/uploadMiddleware.js";
+import { uploadMultipleImages, deleteCloudinaryImage } from "../middleware/uploadMiddleware.js";
+import { expireStaleVnpayBookings } from "./bookingController.js";
+import { parseLocalDateOnly } from "../utils/statsUtils.js";
+import { validateSeasonalPricing, calculateBookingPrice } from "../utils/pricingUtils.js";
 
 const parseJsonList = (value, fallback = []) => {
     if (!value) return fallback;
@@ -26,8 +29,13 @@ export const createRoom = async (req, res) => {
             return res.status(404).json({ success: false, message: "Không tìm thấy homestay của bạn!" });
         }
 
-        const images = Array.isArray(req.files)
-            ? req.files.map((file) => getUploadedFileUrl(req, file.filename))
+        const seasonValidation = validateSeasonalPricing(seasonalPricing);
+        if (!seasonValidation.valid) {
+            return res.status(400).json({ success: false, message: seasonValidation.message });
+        }
+
+        const images = Array.isArray(req.files) && req.files.length > 0
+            ? await uploadMultipleImages(req, req.files, "homestay/rooms")
             : [];
 
         const room = await Room.create({
@@ -36,7 +44,7 @@ export const createRoom = async (req, res) => {
             pricePerNight: +pricePerNight,
             maxGuests: maxGuests ? Math.max(1, parseInt(maxGuests, 10)) : 2,
             amenities: parseJsonList(amenities),
-            seasonalPricing: parseJsonList(seasonalPricing),
+            seasonalPricing: seasonValidation.items,
             images,
             isAvailable: true,
         });
@@ -60,12 +68,15 @@ export const getRooms = async (req, res) => {
             whereClause.maxGuests = { [Op.gte]: Number(guests) };
         }
 
-        // Exclude rooms that are already booked
+        // Exclude rooms that are already booked (auto-expiring stale unpaid VNPay bookings first)
+        await expireStaleVnpayBookings();
+        let validDateRange = null;
         if (checkIn && checkOut) {
-            const start = new Date(checkIn);
-            const end = new Date(checkOut);
+            const start = parseLocalDateOnly(checkIn);
+            const end = parseLocalDateOnly(checkOut);
 
-            if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start < end) {
+            if (start && end && start < end) {
+                validDateRange = { start, end };
                 const conflictingBookings = await Booking.findAll({
                     where: {
                         status: { [Op.ne]: "cancelled" },
@@ -136,9 +147,18 @@ export const getRooms = async (req, res) => {
             const reviewCount = ratings.length;
             const averageRating = reviewCount > 0
                 ? Number((ratings.reduce((sum, val) => sum + val, 0) / reviewCount).toFixed(1))
-                : 5.0;
+                : 0;
             plain.reviewCount = reviewCount;
             plain.averageRating = averageRating;
+
+            if (validDateRange) {
+                const priced = calculateBookingPrice(plain, validDateRange.start, validDateRange.end);
+                plain.effectivePricePerNight = priced.averagePricePerNight;
+                plain.stayTotalPrice = priced.totalPrice;
+                plain.stayNights = priced.nights;
+            } else {
+                plain.effectivePricePerNight = Number(plain.pricePerNight) || 0;
+            }
             return plain;
         });
 
@@ -191,13 +211,26 @@ export const updateRoom = async (req, res) => {
         if (maxGuests !== undefined) room.maxGuests = Math.max(1, parseInt(maxGuests, 10));
         if (isAvailable !== undefined) room.isAvailable = isAvailable === true || isAvailable === 'true';
         if (amenities !== undefined) room.amenities = parseJsonList(amenities);
-        if (seasonalPricing !== undefined) room.seasonalPricing = parseJsonList(seasonalPricing);
+        if (seasonalPricing !== undefined) {
+            const seasonValidation = validateSeasonalPricing(seasonalPricing);
+            if (!seasonValidation.valid) {
+                return res.status(400).json({ success: false, message: seasonValidation.message });
+            }
+            room.seasonalPricing = seasonValidation.items;
+        }
 
+        const previousImages = Array.isArray(room.images) ? [...room.images] : [];
+        let replacedImages = false;
         if (req.files && req.files.length > 0) {
-            room.images = req.files.map((file) => getUploadedFileUrl(req, file.filename));
+            room.images = await uploadMultipleImages(req, req.files, "homestay/rooms");
+            replacedImages = true;
         }
 
         await room.save();
+
+        if (replacedImages && previousImages.length > 0) {
+            Promise.all(previousImages.map((url) => deleteCloudinaryImage(url)));
+        }
 
         res.json({ success: true, message: "Cập nhật thông tin phòng thành công!", room });
     } catch (error) {
@@ -244,9 +277,16 @@ export const deleteRoom = async (req, res) => {
             return res.status(403).json({ success: false, message: "Không có quyền xóa phòng." });
         }
 
-        const count = await Room.destroy({ where: { id, hotelId: hotel.id } });
-        if (!count) {
+        const room = await Room.findOne({ where: { id, hotelId: hotel.id } });
+        if (!room) {
             return res.status(404).json({ success: false, message: "Không tìm thấy phòng cần xóa." });
+        }
+
+        const oldImages = Array.isArray(room.images) ? [...room.images] : [];
+        await room.destroy();
+
+        if (oldImages.length > 0) {
+            Promise.all(oldImages.map((url) => deleteCloudinaryImage(url)));
         }
 
         res.json({ success: true, message: "Đã xóa phòng thành công!" });
@@ -292,7 +332,26 @@ export const getRoomById = async (req, res) => {
             }
         }
 
-        res.json({ success: true, room });
+        // Attach authentic review stats & host reply rate
+        const hotelReviews = await Review.findAll({
+            where: { hotelId: room.hotelId },
+            attributes: ["rating", "ownerReply"],
+        });
+        const reviewCount = hotelReviews.length;
+        const averageRating = reviewCount > 0
+            ? Number((hotelReviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / reviewCount).toFixed(1))
+            : 0;
+        const repliedCount = hotelReviews.filter((r) => Boolean(r.ownerReply)).length;
+        const ownerReplyRate = reviewCount > 0 ? Math.round((repliedCount / reviewCount) * 100) : null;
+
+        const roomPayload = {
+            ...room.toJSON(),
+            reviewCount,
+            averageRating,
+            ownerReplyRate,
+        };
+
+        res.json({ success: true, room: roomPayload });
     } catch (error) {
         console.error("Get room by id error:", error);
         res.status(500).json({ success: false, message: error.message });

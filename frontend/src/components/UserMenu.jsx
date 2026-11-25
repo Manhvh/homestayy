@@ -74,12 +74,12 @@ const UserMenu = () => {
           <div className="py-1 text-sm font-medium">
             <button
               onClick={() => {
-                openProfileModal();
+                navigate('/profile');
                 setIsOpen(false);
               }}
               className="w-full text-left px-4 py-2.5 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 transition cursor-pointer"
             >
-              <span>Thông tin cá nhân</span>
+              <span>Hồ sơ & Đổi mật khẩu</span>
             </button>
 
             <button

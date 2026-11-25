@@ -87,6 +87,36 @@ const Dashboard = () => {
     }
   };
 
+  // Confirm VNPay refund for cancelled paid booking
+  const handleMarkRefunded = async (bookingId) => {
+    if (isLoading) return;
+    if (!window.confirm("Xác nhận đã hoàn tiền VNPay cho đơn đặt phòng này?")) return;
+    try {
+      setIsLoading(true);
+      setActionBookingId(bookingId);
+      const token = await getToken();
+      const { data } = await axios.put(
+        `/api/bookings/${bookingId}/refund`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        fetchDashboardData();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setIsLoading(false);
+      setActionBookingId(null);
+    }
+  };
+
   // Send confirmation email to customer & update isSendMail = true
   const handleSendMail = async (bookingId) => {
     if (isLoading) return;
@@ -461,14 +491,22 @@ const Dashboard = () => {
                         <div className="flex flex-col items-center gap-0.5 mt-1">
                           <span
                             className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              item.isPaid
+                              item.status === "cancelled" && item.isPaid
+                                ? item.refundStatus === "refunded"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-amber-100 text-amber-800"
+                                : item.isPaid
                                 ? "bg-emerald-100 text-emerald-700"
                                 : item.paymentMethod === "VNPay"
                                 ? "bg-blue-50 text-blue-700 border border-blue-200"
                                 : "bg-gray-100 text-gray-600"
                             }`}
                           >
-                            {item.isPaid
+                            {item.status === "cancelled" && item.isPaid
+                              ? item.refundStatus === "refunded"
+                                ? "✓ Đã hoàn tiền VNPay"
+                                : "⏳ Chờ hoàn tiền VNPay"
+                              : item.isPaid
                               ? "✓ Đã thanh toán VNPay"
                               : item.paymentMethod === "VNPay"
                               ? "VNPay • Chưa thanh toán"
@@ -556,6 +594,16 @@ const Dashboard = () => {
                             {isLoading && actionBookingId === (item.id || item._id)
                               ? "Đang xử lý..."
                               : "Hủy đơn"}
+                          </button>
+                        ) : item.isPaid && item.refundStatus === "pending" ? (
+                          <button
+                            onClick={() => handleMarkRefunded(item.id || item._id)}
+                            disabled={isLoading}
+                            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+                          >
+                            {isLoading && actionBookingId === (item.id || item._id)
+                              ? "Đang xử lý..."
+                              : "Xác nhận hoàn tiền"}
                           </button>
                         ) : (
                           <span className="text-xs text-gray-400">Đã đóng</span>

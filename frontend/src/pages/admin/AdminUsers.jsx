@@ -12,6 +12,8 @@ const AdminUsers = () => {
     const currentUserId = String(currentUser?.id || currentUser?._id || '');
     const [users, setUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterRole, setFilterRole] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
 
@@ -79,14 +81,20 @@ const AdminUsers = () => {
         fetchUsers();
     }, [fetchUsers]);
 
-    const filteredUsers = useMemo(() => users.filter(u =>
-        u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [users, searchTerm]);
+    const filteredUsers = useMemo(() => users.filter(u => {
+        const kw = searchTerm.trim().toLowerCase();
+        if (kw && !u.username?.toLowerCase().includes(kw) && !u.email?.toLowerCase().includes(kw)) {
+            return false;
+        }
+        if (filterRole !== 'all' && u.role !== filterRole) return false;
+        if (filterStatus === 'active' && u.isBlocked) return false;
+        if (filterStatus === 'blocked' && !u.isBlocked) return false;
+        return true;
+    }), [users, searchTerm, filterRole, filterStatus]);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, filterRole, filterStatus]);
 
     const paginatedUsers = useMemo(() => {
         const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -102,16 +110,37 @@ const AdminUsers = () => {
                 subTitle="Theo dõi danh sách toàn bộ tài khoản khách hàng, chủ nhà và quản trị viên; phân quyền vai trò và xử lý tài khoản vi phạm."
             />
 
-            {/* Search Bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <input
-                    type="text"
-                    placeholder="Tìm kiếm theo tên hoặc email người dùng..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full sm:w-80 border border-gray-300 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                />
-                <span className="text-xs text-gray-500">
+            {/* Search & Filter Bar */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
+                    <input
+                        type="text"
+                        placeholder="Tìm kiếm theo tên hoặc email người dùng..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full sm:w-72 border border-gray-300 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                    />
+                    <select
+                        value={filterRole}
+                        onChange={e => setFilterRole(e.target.value)}
+                        className="border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 bg-white outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                        <option value="all">Tất cả vai trò</option>
+                        <option value="user">Khách hàng</option>
+                        <option value="hotelOwner">Chủ homestay</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <select
+                        value={filterStatus}
+                        onChange={e => setFilterStatus(e.target.value)}
+                        className="border border-gray-300 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 bg-white outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="blocked">Đã khóa</option>
+                    </select>
+                </div>
+                <span className="text-xs text-gray-500 whitespace-nowrap">
                     Tổng cộng: <strong>{filteredUsers.length}</strong> người dùng
                 </span>
             </div>

@@ -163,7 +163,37 @@ export const getOwnerReviews = async (req, res) => {
     }
 };
 
-// API to get overall review statistics & per-homestay stats (Public / Admin)
+// Public endpoint for Experience page: returns top reviews (>= 4 stars) of approved homestays only
+export const getPublicReviewHighlights = async (req, res) => {
+    try {
+        const reviews = await Review.findAll({
+            where: {
+                rating: { [Op.gte]: 4 },
+            },
+            include: [
+                { model: User, as: "user", attributes: ["id", "username", "image"] },
+                {
+                    model: Hotel,
+                    as: "hotel",
+                    where: { status: "approved" },
+                    attributes: ["id", "name", "city"],
+                },
+            ],
+            order: [
+                ["rating", "DESC"],
+                ["createdAt", "DESC"],
+            ],
+            limit: 6,
+        });
+
+        res.json({ success: true, reviews });
+    } catch (error) {
+        console.error("Get public review highlights error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// API to get overall review statistics & per-homestay stats (Admin only)
 // Supports optional query filters: ?hotelId=...&rating=...
 export const getReviewStats = async (req, res) => {
     try {

@@ -1,5 +1,5 @@
 import { Hotel, User } from "../models/index.js";
-import { getUploadedFileUrl } from "../middleware/uploadMiddleware.js";
+import { uploadSingleImage, deleteCloudinaryImage } from "../middleware/uploadMiddleware.js";
 
 export const registerHotel = async (req, res) => {
     try {
@@ -21,7 +21,7 @@ export const registerHotel = async (req, res) => {
         }
 
         const imageUrl = req.file
-            ? getUploadedFileUrl(req, req.file.filename)
+            ? await uploadSingleImage(req, req.file, "homestay/hotels")
             : image
             ? String(image).trim()
             : "";
@@ -66,7 +66,9 @@ export const getMyHotel = async (req, res) => {
 export const updateMyHotel = async (req, res) => {
     try {
         const { name, address, contact, city, description, image } = req.body;
-        const uploadedImageUrl = req.file ? getUploadedFileUrl(req, req.file.filename) : undefined;
+        const uploadedImageUrl = req.file
+            ? await uploadSingleImage(req, req.file, "homestay/hotels")
+            : undefined;
         let hotel = await Hotel.findOne({ where: { ownerId: req.user.id } });
 
         if (!hotel) {
@@ -100,6 +102,7 @@ export const updateMyHotel = async (req, res) => {
             });
         }
 
+        const previousImage = hotel.image;
         if (name && String(name).trim()) hotel.name = String(name).trim();
         if (address && String(address).trim()) hotel.address = String(address).trim();
         if (contact && String(contact).trim()) hotel.contact = String(contact).trim();
@@ -111,9 +114,28 @@ export const updateMyHotel = async (req, res) => {
             hotel.image = String(image).trim();
         }
 
+        let resubmitted = false;
+        if (hotel.status === "rejected") {
+            hotel.status = "pending";
+            hotel.rejectionReason = null;
+            resubmitted = true;
+        }
+
         await hotel.save();
 
-        res.json({ success: true, created: false, message: "Cập nhật thông tin homestay thành công!", hotel });
+        if (uploadedImageUrl && previousImage && previousImage !== hotel.image) {
+            deleteCloudinaryImage(previousImage);
+        }
+
+        res.json({
+            success: true,
+            created: false,
+            resubmitted,
+            message: resubmitted
+                ? "Đã cập nhật và gửi lại hồ sơ Homestay chờ Quản trị viên phê duyệt!"
+                : "Cập nhật thông tin homestay thành công!",
+            hotel,
+        });
     } catch (error) {
         console.error("Update my hotel error:", error);
         res.status(500).json({ success: false, message: error.message });

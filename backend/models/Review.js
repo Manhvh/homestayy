@@ -45,6 +45,12 @@ const Review = sequelize.define("Review", {
 }, {
     tableName: "reviews",
     timestamps: true,
+    indexes: [
+        {
+            name: "idx_reviews_hotel_rating",
+            fields: ["hotelId", "rating"],
+        },
+    ],
 });
 
 Review.prototype.toJSON = function () {

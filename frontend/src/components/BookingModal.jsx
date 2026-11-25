@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import toast from "react-hot-toast";
+import { getLocalTodayYMD } from "../utils/formatters";
 
 const formatShortViDate = (ymd) => {
   if (!ymd) return "";
@@ -189,7 +190,7 @@ const BookingModal = ({
               <input
                 type="date"
                 id="modalCheckInDate"
-                min={new Date().toISOString().split("T")[0]}
+                min={getLocalTodayYMD()}
                 value={checkInDate}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -211,7 +212,7 @@ const BookingModal = ({
               <input
                 type="date"
                 id="modalCheckOutDate"
-                min={checkInDate || new Date().toISOString().split("T")[0]}
+                min={checkInDate || getLocalTodayYMD()}
                 value={checkOutDate}
                 disabled={!checkInDate}
                 onChange={(e) => {

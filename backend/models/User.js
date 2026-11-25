@@ -37,8 +37,23 @@ const User = sequelize.define("User", {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
+    isVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+    },
     codeVerify: {
         type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: null,
+    },
+    resetOtpHash: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        defaultValue: null,
+    },
+    resetOtpExpiresAt: {
+        type: DataTypes.DATE,
         allowNull: true,
         defaultValue: null,
     },
@@ -49,11 +64,21 @@ const User = sequelize.define("User", {
 }, {
     tableName: "users",
     timestamps: true,
+    indexes: [
+        {
+            name: "uk_users_email",
+            unique: true,
+            fields: ["email"],
+        },
+    ],
 });
 
 User.prototype.toJSON = function () {
     const values = { ...this.get() };
     delete values.password;
+    delete values.codeVerify;
+    delete values.resetOtpHash;
+    delete values.resetOtpExpiresAt;
     values._id = values.id;
     return values;
 };

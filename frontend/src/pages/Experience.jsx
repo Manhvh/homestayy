@@ -13,9 +13,9 @@ const Experience = () => {
     setIsVisible(true);
     const fetchPublicReviews = async () => {
       try {
-        const { data } = await axios.get("/api/reviews/stats");
-        if (data.success && Array.isArray(data.stats?.recentReviews)) {
-          setRealReviews(data.stats.recentReviews.filter((r) => r.rating >= 4).slice(0, 6));
+        const { data } = await axios.get("/api/reviews/highlights");
+        if (data.success && Array.isArray(data.reviews)) {
+          setRealReviews(data.reviews.slice(0, 6));
         }
       } catch {
         // Fallback to static testimonials if API fails

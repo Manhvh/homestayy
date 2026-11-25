@@ -6,13 +6,43 @@ import {
     sendBookingDetailsEmail,
 } from "../utils/mailService.js";
 import { parseLocalDateOnly, formatDateYMD, buildLast6MonthsRevenue } from "../utils/statsUtils.js";
+import { calculateBookingPrice } from "../utils/pricingUtils.js";
+
+export const VNPAY_PENDING_TTL_MS = 15 * 60 * 1000; // 15 minutes matching VNPay vnp_ExpireDate
+
+/**
+ * Automatically cancel abandoned unpaid VNPay bookings older than 15 minutes
+ * so rooms are never locked indefinitely when customers abandon the payment gateway.
+ */
+export const expireStaleVnpayBookings = async (transaction = undefined) => {
+    try {
+        const cutoff = new Date(Date.now() - VNPAY_PENDING_TTL_MS);
+        const [affected] = await Booking.update(
+            { status: "cancelled" },
+            {
+                where: {
+                    paymentMethod: "VNPay",
+                    isPaid: false,
+                    status: "pending",
+                    createdAt: { [Op.lt]: cutoff },
+                },
+                ...(transaction ? { transaction } : {}),
+            }
+        );
+        return affected;
+    } catch (error) {
+        console.warn("Expire stale VNPay bookings warning:", error.message);
+        return 0;
+    }
+};
 
 // Function to check availability of the room
 const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
     try {
-        const start = new Date(checkInDate);
-        const end = new Date(checkOutDate);
-        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+        await expireStaleVnpayBookings();
+        const start = parseLocalDateOnly(checkInDate);
+        const end = parseLocalDateOnly(checkOutDate);
+        if (!start || !end || end <= start) {
             return false;
         }
 
@@ -47,6 +77,7 @@ export const getRoomBookedDates = async (req, res) => {
             return res.status(400).json({ success: false, message: "Thiếu mã phòng." });
         }
 
+        await expireStaleVnpayBookings();
         const today = parseLocalDateOnly(new Date());
 
         const bookings = await Booking.findAll({
@@ -158,13 +189,16 @@ export const createBookings = async (req, res) => {
             });
         }
 
+        // Expire stale unpaid VNPay bookings before checking room conflicts
+        await expireStaleVnpayBookings(t);
+
         // Perform a locking read on bookings to check conflicts against latest committed state
         const conflictingBooking = await Booking.findOne({
             where: {
                 roomId: roomData.id,
                 status: { [Op.ne]: "cancelled" },
-                checkInDate: { [Op.lt]: checkOut },
-                checkOutDate: { [Op.gt]: checkIn },
+                checkInDate: { [Op.lt]: checkOutDay },
+                checkOutDate: { [Op.gt]: checkInDay },
             },
             transaction: t,
             lock: t.LOCK.UPDATE,
@@ -178,23 +212,7 @@ export const createBookings = async (req, res) => {
             });
         }
 
-        let totalPrice = 0;
-        const cur = new Date(checkIn);
-        while (cur < checkOut) {
-            let nightlyRate = roomData.pricePerNight;
-            if (roomData.seasonalPricing && Array.isArray(roomData.seasonalPricing)) {
-                const season = roomData.seasonalPricing.find((s) => {
-                    const sStart = new Date(s.startDate);
-                    const sEnd = new Date(s.endDate);
-                    return cur >= sStart && cur <= sEnd;
-                });
-                if (season) {
-                    nightlyRate = season.pricePerNight;
-                }
-            }
-            totalPrice += nightlyRate;
-            cur.setDate(cur.getDate() + 1);
-        }
+        const { totalPrice } = calculateBookingPrice(roomData, checkInDay, checkOutDay);
 
         const bookingCode = Math.random().toString(36).substring(2, 10);
         const normalizedPaymentMethod = paymentMethod === "VNPay" ? "VNPay" : "Pay At Hotel";
@@ -204,14 +222,15 @@ export const createBookings = async (req, res) => {
             roomId: roomData.id,
             hotelId: hotelData.id,
             guests: guestCount,
-            checkInDate,
-            checkOutDate,
+            checkInDate: checkInDay,
+            checkOutDate: checkOutDay,
             totalPrice,
             status: "pending",
             paymentMethod: normalizedPaymentMethod,
             isPaid: false,
             paidAt: null,
             transactionRef: null,
+            refundStatus: "none",
             isSendMail: false,
             bookingCode,
         }, { transaction: t });
@@ -242,6 +261,7 @@ export const createBookings = async (req, res) => {
 // API to get all bookings for a user
 export const getUserBookings = async (req, res) => {
     try {
+        await expireStaleVnpayBookings();
         const userId = req.user.id;
         const [bookings, userReviews] = await Promise.all([
             Booking.findAll({
@@ -284,6 +304,7 @@ export const getUserBookings = async (req, res) => {
 // API for Partner / Owner to get all bookings of their homestay
 export const getHotelBookings = async (req, res) => {
     try {
+        await expireStaleVnpayBookings();
         const hotel = await Hotel.findOne({ where: { ownerId: req.user.id } });
 
         if (!hotel) {
@@ -341,11 +362,13 @@ export const getHotelBookings = async (req, res) => {
 
 // API to approve / cancel booking status
 export const updateBookingStatus = async (req, res) => {
+    const t = await sequelize.transaction();
     try {
         const { id } = req.params;
         const { status } = req.body;
 
         if (!["pending", "confirmed", "cancelled"].includes(status)) {
+            await t.rollback();
             return res.status(400).json({ success: false, message: "Trạng thái không hợp lệ." });
         }
 
@@ -353,7 +376,88 @@ export const updateBookingStatus = async (req, res) => {
             include: [
                 { model: Hotel, as: "hotel" },
                 { model: User, as: "user", attributes: ["id", "username", "email"] }
-            ]
+            ],
+            transaction: t,
+            lock: t.LOCK.UPDATE,
+        });
+
+        if (!booking) {
+            await t.rollback();
+            return res.status(404).json({ success: false, message: "Không tìm thấy đơn đặt phòng." });
+        }
+
+        if (booking.hotel.ownerId !== req.user.id && req.user.role !== "admin") {
+            await t.rollback();
+            return res.status(403).json({ success: false, message: "Bạn không có quyền cập nhật đơn đặt phòng này." });
+        }
+
+        // Prevent double-booking if reopening a cancelled booking
+        if (booking.status === "cancelled" && status !== "cancelled") {
+            const conflicting = await Booking.findOne({
+                where: {
+                    id: { [Op.ne]: booking.id },
+                    roomId: booking.roomId,
+                    status: { [Op.ne]: "cancelled" },
+                    checkInDate: { [Op.lt]: booking.checkOutDate },
+                    checkOutDate: { [Op.gt]: booking.checkInDate },
+                },
+                transaction: t,
+                lock: t.LOCK.UPDATE,
+            });
+            if (conflicting) {
+                await t.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: "Không thể khôi phục/duyệt lại đơn vì phòng đã có khách khác đặt trùng lịch!",
+                });
+            }
+        }
+
+        booking.status = status;
+        if (status === "cancelled" && booking.isPaid && booking.refundStatus === "none") {
+            booking.refundStatus = "pending";
+        }
+        await booking.save({ transaction: t });
+        await t.commit();
+
+        const codeDisplay = booking.bookingCode || booking.id;
+        if (status === "confirmed") {
+            const mailSent = await sendBookingConfirmedEmail({
+                user: booking.user,
+                hotel: booking.hotel,
+                codeDisplay,
+            });
+            if (mailSent) {
+                booking.isSendMail = true;
+                await booking.save();
+            }
+        }
+
+        const cancelMsg =
+            booking.isPaid && booking.refundStatus === "pending"
+                ? "Đã hủy đơn đặt phòng. Yêu cầu hoàn tiền VNPay đã được chuyển sang trạng thái chờ xử lý."
+                : "Đã hủy đơn đặt phòng.";
+
+        res.json({
+            success: true,
+            message: status === "confirmed" ? "Đã xác nhận duyệt đơn và gửi thông báo tới khách hàng!" : cancelMsg,
+            booking
+        });
+    } catch (error) {
+        if (!t.finished) {
+            await t.rollback();
+        }
+        console.error("Update booking status error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// API for Partner / Admin to mark a cancelled paid VNPay booking as refunded
+export const markBookingRefunded = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const booking = await Booking.findByPk(id, {
+            include: [{ model: Hotel, as: "hotel" }],
         });
 
         if (!booking) {
@@ -361,28 +465,26 @@ export const updateBookingStatus = async (req, res) => {
         }
 
         if (booking.hotel.ownerId !== req.user.id && req.user.role !== "admin") {
-            return res.status(403).json({ success: false, message: "Bạn không có quyền cập nhật đơn đặt phòng này." });
+            return res.status(403).json({ success: false, message: "Bạn không có quyền thực hiện thao tác này." });
         }
 
-        booking.status = status;
-        const codeDisplay = booking.bookingCode || booking.id;
-        if (status === "confirmed") {
-            await sendBookingConfirmedEmail({
-                user: booking.user,
-                hotel: booking.hotel,
-                codeDisplay,
+        if (!booking.isPaid || booking.status !== "cancelled") {
+            return res.status(400).json({
+                success: false,
+                message: "Chỉ có thể xác nhận hoàn tiền cho đơn đã thanh toán và đã bị hủy.",
             });
-            booking.isSendMail = true;
         }
+
+        booking.refundStatus = "refunded";
         await booking.save();
 
         res.json({
             success: true,
-            message: status === "confirmed" ? "Đã xác nhận duyệt đơn và gửi thông báo tới khách hàng!" : "Đã hủy đơn đặt phòng.",
-            booking
+            message: "Đã xác nhận hoàn tiền VNPay cho khách hàng!",
+            booking,
         });
     } catch (error) {
-        console.error("Update booking status error:", error);
+        console.error("Mark booking refunded error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -448,9 +550,19 @@ export const cancelUserBooking = async (req, res) => {
         }
 
         booking.status = "cancelled";
+        if (booking.isPaid && booking.refundStatus === "none") {
+            booking.refundStatus = "pending";
+        }
         await booking.save();
 
-        res.json({ success: true, message: "Đã hủy đơn đặt phòng thành công!" });
+        res.json({
+            success: true,
+            message:
+                booking.isPaid
+                    ? "Đã hủy đơn đặt phòng! Yêu cầu hoàn tiền VNPay đang được ghi nhận và chờ xử lý."
+                    : "Đã hủy đơn đặt phòng thành công!",
+            booking,
+        });
     } catch (error) {
         console.error("Cancel user booking error:", error);
         res.status(500).json({ success: false, message: error.message });

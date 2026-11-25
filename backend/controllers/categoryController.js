@@ -1,5 +1,5 @@
 import { Op } from "sequelize";
-import { Category } from "../models/index.js";
+import { Category, Hotel, Room } from "../models/index.js";
 
 const DEFAULT_AMENITIES = [
     { name: "Free WiFi", type: "amenity", description: "Kết nối Internet tốc độ cao miễn phí" },
@@ -123,12 +123,34 @@ export const updateCategory = async (req, res) => {
             return res.status(400).json({ success: false, message: "Tên danh mục này đã tồn tại trong cùng phân loại." });
         }
 
+        const oldName = category.name;
+        const oldType = category.type;
+
         category.name = nextName;
         category.type = nextType;
         if (icon !== undefined) category.icon = String(icon).trim();
         if (description !== undefined) category.description = String(description).trim();
 
         await category.save();
+
+        // Synchronize existing Hotel/Room records when a category is renamed
+        if (oldName !== nextName && oldType === nextType) {
+            if (nextType === "city") {
+                await Hotel.update({ city: nextName }, { where: { city: oldName } });
+            } else if (nextType === "amenity") {
+                const allRooms = await Room.findAll({ attributes: ["id", "amenities"] });
+                for (const room of allRooms) {
+                    const list = Array.isArray(room.amenities) ? room.amenities : [];
+                    if (list.includes(oldName)) {
+                        const updatedAmenities = Array.from(
+                            new Set(list.map((item) => (item === oldName ? nextName : item)))
+                        );
+                        room.amenities = updatedAmenities;
+                        await room.save();
+                    }
+                }
+            }
+        }
 
         res.json({ success: true, message: "Cập nhật danh mục thành công!", category });
     } catch (error) {

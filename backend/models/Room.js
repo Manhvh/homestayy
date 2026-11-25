@@ -44,6 +44,12 @@ const Room = sequelize.define("Room", {
 }, {
     tableName: "rooms",
     timestamps: true,
+    indexes: [
+        {
+            name: "idx_rooms_hotel_available",
+            fields: ["hotelId", "isAvailable"],
+        },
+    ],
 });
 
 Room.prototype.toJSON = function () {

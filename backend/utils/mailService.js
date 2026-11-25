@@ -28,7 +28,7 @@ export const sendVerificationEmail = async ({ email, username, code }) => {
             <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e40af; background: #eff6ff; padding: 14px 20px; text-align: center; border-radius: 8px; margin: 16px 0;">
                 ${code}
             </div>
-            <p style="font-size: 12px; color: #6b7280;">Mã có hiệu lực trong vòng 1 phút.</p>
+            <p style="font-size: 12px; color: #6b7280;">Mã có hiệu lực trong vòng 5 phút.</p>
         </div>
     `;
     return safeSendMail(
@@ -50,7 +50,7 @@ export const sendPasswordResetEmail = async ({ email, username, code }) => {
             <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e40af; background: #eff6ff; padding: 14px 20px; text-align: center; border-radius: 8px; margin: 16px 0;">
                 ${code}
             </div>
-            <p style="font-size: 12px; color: #6b7280;">Mã có hiệu lực trong vòng 1 phút.</p>
+            <p style="font-size: 12px; color: #6b7280;">Mã có hiệu lực trong vòng 5 phút.</p>
         </div>
     `;
     return safeSendMail(

@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import StarRating from "../components/StarRating";
 import Pagination from "../components/Pagination";
 import { useAppContext } from "../context/AppContext";
+import { getLocalTodayYMD } from "../utils/formatters";
 
 const PAGE_SIZE = 10;
 
@@ -47,7 +48,9 @@ const AllRooms = () => {
   const guestsQuery = searchParams.get('guests') || '';
 
   const [addressSearch, setAddressSearch] = useState(destinationQuery);
-  const [openFilters, setOpenFilters] = useState(false);
+  const [openFilters, setOpenFilters] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
 
   useEffect(() => {
     setAddressSearch(destinationQuery);
@@ -99,7 +102,7 @@ const AllRooms = () => {
   const MIN_PRICE_LIMIT = 0;
   const dynamicMaxPrice = useMemo(() => {
     const highest = (rooms || []).reduce(
-      (max, r) => Math.max(max, Number(r.pricePerNight) || 0),
+      (max, r) => Math.max(max, Number(r.effectivePricePerNight ?? r.pricePerNight) || 0),
       0
     );
     if (highest <= 0) return 2000000;
@@ -176,7 +179,7 @@ const AllRooms = () => {
           if (!matchesType) return false;
         }
 
-        const price = Number(room.pricePerNight) || 0;
+        const price = Number(room.effectivePricePerNight ?? room.pricePerNight) || 0;
         if (price < minPrice) return false;
         if (maxPrice !== null && price > maxPrice) return false;
 
@@ -206,8 +209,10 @@ const AllRooms = () => {
         return true;
       })
       .sort((a, b) => {
-        if (selectedSort === 'price_asc') return a.pricePerNight - b.pricePerNight;
-        if (selectedSort === 'price_desc') return b.pricePerNight - a.pricePerNight;
+        const priceA = Number(a.effectivePricePerNight ?? a.pricePerNight) || 0;
+        const priceB = Number(b.effectivePricePerNight ?? b.pricePerNight) || 0;
+        if (selectedSort === 'price_asc') return priceA - priceB;
+        if (selectedSort === 'price_desc') return priceB - priceA;
         if (selectedSort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
         return 0;
       });
@@ -455,13 +460,21 @@ const AllRooms = () => {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <StarRating rating={room.averageRating || 5} />
-                      <span className="text-sm font-bold text-gray-800">
-                        {room.averageRating ? Number(room.averageRating).toFixed(1) : "5.0"}
-                      </span>
-                      <p className="text-gray-500 text-sm">
-                        ({room.reviewCount > 0 ? `${room.reviewCount} đánh giá` : "Được đánh giá cao"})
-                      </p>
+                      {room.reviewCount > 0 ? (
+                        <>
+                          <StarRating rating={room.averageRating} />
+                          <span className="text-sm font-bold text-gray-800">
+                            {Number(room.averageRating).toFixed(1)}
+                          </span>
+                          <p className="text-gray-500 text-sm">
+                            ({room.reviewCount} đánh giá)
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                          Mới • Chưa có đánh giá
+                        </span>
+                      )}
                     </div>
                     
                     <div className="flex items-center gap-3 text-gray-500 text-sm">
@@ -482,8 +495,14 @@ const AllRooms = () => {
                     {/* Room Price and Book Button */}
                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
                       <div>
-                        <p className="text-2xl font-bold text-gray-900">{Number(room.pricePerNight).toLocaleString('vi-VN')} {currency}</p>
-                        <p className="text-xs text-gray-500">mỗi đêm</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {Number(room.effectivePricePerNight ?? room.pricePerNight).toLocaleString('vi-VN')} {currency}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {room.stayNights > 0 && Number(room.effectivePricePerNight) !== Number(room.pricePerNight)
+                            ? `TB / đêm (áp giá mùa • ${room.stayNights} đêm: ${Number(room.stayTotalPrice).toLocaleString('vi-VN')} ${currency})`
+                            : 'mỗi đêm'}
+                        </p>
                       </div>
                       <button
                         onClick={() => handleViewRoomDetails(roomId)}
@@ -556,7 +575,7 @@ const AllRooms = () => {
                   <input
                     type="date"
                     value={dateFilters.checkIn}
-                    min={new Date().toISOString().split("T")[0]}
+                    min={getLocalTodayYMD()}
                     onChange={(e) => {
                       const val = e.target.value;
                       setDateFilters(prev => {
@@ -573,7 +592,7 @@ const AllRooms = () => {
                   <input
                     type="date"
                     value={dateFilters.checkOut}
-                    min={dateFilters.checkIn || new Date().toISOString().split("T")[0]}
+                    min={dateFilters.checkIn || getLocalTodayYMD()}
                     onChange={(e) => {
                       const val = e.target.value;
                       setDateFilters(prev => ({ ...prev, checkOut: val }));

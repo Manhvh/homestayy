@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { assets, cities } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
+import { getLocalTodayYMD } from "../utils/formatters";
 
 const HERO_IMAGES = [
   "url('https://images.unsplash.com/photo-1564501049412-61c2a3083791?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80')",
@@ -179,7 +180,7 @@ const Hero = () => {
                   id="checkIn"
                   type="date"
                   value={checkIn}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={getLocalTodayYMD()}
                   onChange={(e) => {
                     const val = e.target.value;
                     setCheckIn(val);
@@ -219,7 +220,7 @@ const Hero = () => {
                   id="checkOut"
                   type="date"
                   value={checkOut}
-                  min={checkIn || new Date().toISOString().split("T")[0]}
+                  min={checkIn || getLocalTodayYMD()}
                   onChange={(e) => {
                     const val = e.target.value;
                     setCheckOut(val);

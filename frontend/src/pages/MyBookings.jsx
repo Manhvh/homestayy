@@ -3,6 +3,7 @@ import Pagination from "../components/Pagination";
 import { assets } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
 import { downloadCsv } from "../utils/csvExport";
+import { parseLocalDateOnly, getLocalTodayYMD } from "../utils/formatters";
 import toast from "react-hot-toast";
 
 const PAGE_SIZE = 10;
@@ -13,21 +14,6 @@ const RATING_LABELS = {
   3: "Bình thường",
   4: "Hài lòng",
   5: "Tuyệt vời",
-};
-
-const parseLocalDateOnly = (value) => {
-  if (!value) return null;
-  if (value instanceof Date) {
-    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-  }
-  const str = String(value).trim();
-  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  }
-  const d = new Date(str);
-  if (isNaN(d.getTime())) return null;
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
 const MyBookings = () => {
@@ -297,7 +283,7 @@ const MyBookings = () => {
       toast.error("Không có đơn đặt phòng nào để xuất hóa đơn.");
       return;
     }
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getLocalTodayYMD();
     downloadCsv({
       filename: `lich-su-dat-phong-${todayStr}.csv`,
       headers: [
@@ -542,7 +528,11 @@ const MyBookings = () => {
                             </span>
                           )}
                           <p className="text-[11px] text-gray-400 mt-0.5">
-                            {booking.isPaid
+                            {booking.status === "cancelled" && booking.isPaid
+                              ? booking.refundStatus === "refunded"
+                                ? "Đã hoàn tiền VNPay"
+                                : "Chờ hoàn tiền VNPay"
+                              : booking.isPaid
                               ? "Đã thanh toán VNPay"
                               : booking.paymentMethod === "VNPay"
                               ? "VNPay • Chưa thanh toán"
@@ -653,6 +643,17 @@ const MyBookings = () => {
                   >
                     {isPaid ? "✓ Đã thanh toán" : "Chưa thanh toán"}
                   </span>
+                  {b.status === "cancelled" && isPaid && (
+                    <span
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        b.refundStatus === "refunded"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {b.refundStatus === "refunded" ? "Đã hoàn tiền VNPay" : "Chờ hoàn tiền VNPay"}
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                   {b.hotel?.name || "Homestay"}

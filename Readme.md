@@ -89,7 +89,7 @@
 | **Database** | MySQL 8.0 / TiDB Cloud / Aiven | Cơ sở dữ liệu quan hệ (6 bảng), Row-level Locking Transaction, Seed data |
 | **Thanh toán** | VNPay Sandbox (v2.1.0) | Ký & xác thực chữ ký HMAC-SHA512 chuẩn VNPay (`create`, `return`, `ipn`, kèm Simulator cục bộ khi chưa cấu hình merchant key) |
 | **Xác thực** | Native JWT + OTP Email | HMAC-SHA256 Token, băm mật khẩu chuẩn `crypto.scryptSync` (NIST), OTP 6 số |
-| **Lưu trữ** | Local Disk Storage | Tải ảnh Homestay, phòng và avatar trực tiếp lên máy chủ tại `/uploads` |
+| **Lưu trữ** | Cloudinary CDN + Multer | Stream ảnh trực tiếp lên Cloudinary (`homestay/avatars`, `homestay/hotels`, `homestay/rooms`), tự tối ưu `quality/format: auto`, dọn ảnh cũ khi cập nhật/xóa, có fallback `/uploads` khi dev offline |
 | **Email** | Nodemailer | Gửi mã OTP, xác nhận đặt phòng và thông báo thanh toán VNPay thành công |
 | **DevOps** | Docker, Vercel, Render | Đóng gói MySQL 8.0 & phpMyAdmin qua Docker Compose; cấu hình sẵn Cloud Deploy |
 
@@ -256,29 +256,42 @@ Truy cập ứng dụng tại `http://localhost:5173`.
 * `POST /api/bookings/book` - Tạo đơn đặt phòng (Transaction Lock, hỗ trợ `Pay At Hotel` và `VNPay`)
 * `GET /api/bookings/user` - Danh sách đơn đặt phòng của khách hàng
 * `GET /api/bookings/hotel` - Danh sách đơn đặt, doanh thu `confirmed` & dữ liệu biểu đồ 6 tháng của Homestay
-* `PUT /api/bookings/:id/status` - Chủ nhà duyệt/hủy đơn
+* `PUT /api/bookings/:id/status` - Chủ nhà duyệt/hủy đơn (tự động chặn khôi phục đơn trùng lịch, gắn cờ chờ hoàn tiền nếu đã thanh toán VNPay)
+* `PUT /api/bookings/:id/refund` - Chủ nhà / Admin xác nhận đã hoàn tiền cho đơn VNPay bị hủy
 * `POST /api/bookings/:id/send-mail` - Gửi/gửi lại email xác nhận
-* `PUT /api/bookings/:id/cancel` - Khách hủy đơn (chặn khi ngày hiện tại `>= checkInDate`)
-* `POST /api/payments/vnpay/create` - Tạo URL thanh toán VNPay Sandbox ký HMAC-SHA512
+* `PUT /api/bookings/:id/cancel` - Khách hủy đơn (chặn khi ngày hiện tại `>= checkInDate`, tự ghi nhận chờ hoàn tiền nếu đã thanh toán VNPay)
+* `POST /api/payments/vnpay/create` - Tạo URL thanh toán VNPay Sandbox ký HMAC-SHA512 (tự hủy đơn VNPay chưa thanh toán quá 15 phút)
 * `GET /api/payments/vnpay/return` - Xác thực chữ ký VNPay trả về & cập nhật `isPaid = true`, `paidAt`, `status = "confirmed"`
 * `GET /api/payments/vnpay/ipn` - Webhook IPN chuẩn VNPay
 
 ### 4. Đánh Giá & Phản Hồi (`/api/reviews`)
 * `POST /api/reviews` - Khách gửi đánh giá (chỉ cho phép khi có đơn `status === "confirmed"`)
+* `GET /api/reviews/highlights` - Danh sách đánh giá nổi bật công khai (`>= 4★` thuộc Homestay đã duyệt)
 * `GET /api/reviews/hotel/:hotelId` - Danh sách đánh giá của một Homestay (kèm `ownerReply`, `repliedAt`)
-* `GET /api/reviews/owner` - Danh sách đánh giá & thống kê của Homestay thuộc Chủ nhà
-* `PUT /api/reviews/:id/reply` - Chủ nhà gửi/chỉnh sửa phản hồi đánh giá
-* `GET /api/reviews/stats` - Thống kê tổng quan & theo từng Homestay (hỗ trợ lọc `?hotelId=&rating=`)
+* `GET /api/reviews/owner` - Danh sách đánh giá & thống kê của Homestay thuộc Chủ nhà (`ownerProtect`)
+* `PUT /api/reviews/:id/reply` - Chủ nhà gửi/chỉnh sửa phản hồi đánh giá (`ownerProtect`)
+* `GET /api/reviews/stats` - Thống kê tổng quan & theo từng Homestay (chỉ dành cho *Admin*, hỗ trợ lọc `?hotelId=&rating=`)
 * `DELETE /api/reviews/:id` - Xóa đánh giá (**chỉ tác giả đánh giá hoặc Admin**)
 
 ### 5. Danh Mục & Quản Trị Hệ Thống (`/api/categories`, `/api/admin`)
 * `GET /api/categories` - Lấy danh mục tiện ích và tỉnh thành
-* `POST /api/categories` / `PUT /api/categories/:id` / `DELETE /api/categories/:id` - Thêm / Sửa / Xóa danh mục (*Admin*)
+* `POST /api/categories` / `PUT /api/categories/:id` / `DELETE /api/categories/:id` - Thêm / Sửa (tự đồng bộ tên tới Phòng & Homestay) / Xóa danh mục (*Admin*)
 * `GET /api/admin/stats` - Thống kê toàn sàn, doanh thu đơn `confirmed` & biểu đồ 6 tháng (*Admin*)
 * `GET /api/admin/users` - Danh sách người dùng (*Admin*)
 * `PUT /api/admin/users/:id/role` - Đổi vai trò (chặn Admin tự hạ quyền)
 * `PUT /api/admin/users/:id/status` - Khóa/mở khóa tài khoản (chặn Admin tự khóa chính mình)
-* `GET /api/admin/hotels` / `PUT /api/admin/hotels/:id/status` - Kiểm duyệt Homestay (*Admin*)
+* `GET /api/admin/hotels` / `PUT /api/admin/hotels/:id/status` - Kiểm duyệt Homestay kèm xem danh sách phòng & nhập lý do từ chối (*Admin*)
+
+### 6. Tài Liệu API (Swagger) & Kiểm Thử Tự Động
+* **Swagger UI (OpenAPI 3.0.3)**: Truy cập `http://localhost:4000/api-docs` (hoặc JSON tại `/api-docs.json`).
+* **Unit & Security Tests** (17 test cases: mật khẩu/JWT/OTP, giá mùa 1 ngày & nhiều đợt, chữ ký VNPay HMAC-SHA512, lọc file upload XSS, Helmet & RBAC):
+  ```bash
+  cd backend && npm test
+  ```
+* **Integration & Concurrency Test** (chứng minh Row-level Lock `SELECT ... FOR UPDATE` chống đặt trùng phòng đồng thời & RBAC thực tế với MySQL):
+  ```bash
+  cd backend && npm run test:integration
+  ```
 
 ---
 

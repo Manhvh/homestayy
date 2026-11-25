@@ -38,7 +38,7 @@ const Profile = () => {
 
   if (!user) {
     return (
-      <div className="max-w-xl mx-auto py-16 px-4 text-center">
+      <div className="max-w-xl mx-auto pt-32 pb-16 px-4 text-center">
         <h2 className="text-xl font-bold text-gray-800 mb-2">Vui lòng đăng nhập</h2>
         <p className="text-gray-500 text-sm">Bạn cần đăng nhập để xem và chỉnh sửa thông tin cá nhân.</p>
       </div>
@@ -127,7 +127,7 @@ const Profile = () => {
   const roleInfo = getRoleBadgeInfo(user.role);
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6">
+    <div className="max-w-3xl mx-auto pt-28 pb-16 px-4 sm:px-6">
       <Title
         align="left"
         font="outfit"

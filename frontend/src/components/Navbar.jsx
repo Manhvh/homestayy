@@ -19,7 +19,8 @@ const Navbar = () => {
 
   const location = useLocation();
 
-  const { user, navigate, isOwner, setShowHotelRegistration, isAdmin, openLoginModal } = useAppContext();
+  const { user, navigate, openLoginModal, cities: dynamicCities } = useAppContext();
+  const availableCities = dynamicCities && dynamicCities.length > 0 ? dynamicCities : cities;
 
   // Effect to handle scroll event and change navbar style
   useEffect(() => {
@@ -133,14 +134,15 @@ const Navbar = () => {
                   </label>
                   <input
                     type="text"
+                    list="navbar-cities"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Nhập tên thành phố..."
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     autoFocus
                   />
-                  <datalist id="cities">
-                    {cities.map((city, index) => (
+                  <datalist id="navbar-cities">
+                    {availableCities.map((city, index) => (
                       <option value={city} key={index} />
                     ))}
                   </datalist>
@@ -157,7 +159,7 @@ const Navbar = () => {
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-sm font-semibold text-gray-700 mb-2">Điểm đến phổ biến</p>
                 <div className="flex flex-wrap gap-2">
-                  {cities.slice(0, 6).map((city, index) => (
+                  {availableCities.slice(0, 6).map((city, index) => (
                     <button
                       key={index}
                       onClick={() => {

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { Booking, Hotel, Room, User } from "../models/index.js";
 import { sendPaymentSuccessEmail } from "../utils/mailService.js";
+import { expireStaleVnpayBookings } from "./bookingController.js";
 
 const VNP_RESPONSE_MESSAGES = {
     "00": "Giao dịch thanh toán thành công!",
@@ -60,7 +61,7 @@ const formatVnpDateGMT7 = (date = new Date()) => {
 };
 
 // VNPay v2.1.0 canonical parameter sorting & URL-encoding (spaces encoded as '+')
-const sortAndEncodeVnpParams = (obj) => {
+export const sortAndEncodeVnpParams = (obj) => {
     const sorted = {};
     const keys = Object.keys(obj)
         .filter((k) => obj[k] !== undefined && obj[k] !== null && obj[k] !== "")
@@ -71,15 +72,15 @@ const sortAndEncodeVnpParams = (obj) => {
     return sorted;
 };
 
-const buildSignData = (sortedEncodedObj) =>
+export const buildSignData = (sortedEncodedObj) =>
     Object.keys(sortedEncodedObj)
         .map((k) => `${k}=${sortedEncodedObj[k]}`)
         .join("&");
 
-const signHmacSha512 = (data, secretKey) =>
+export const signHmacSha512 = (data, secretKey) =>
     crypto.createHmac("sha512", secretKey).update(Buffer.from(data, "utf-8")).digest("hex");
 
-const safeCompareHex = (a, b) => {
+export const safeCompareHex = (a, b) => {
     if (!a || !b) return false;
     const bufA = Buffer.from(String(a).toLowerCase(), "utf-8");
     const bufB = Buffer.from(String(b).toLowerCase(), "utf-8");
@@ -99,7 +100,7 @@ const getClientIp = (req) => {
     return ip || "127.0.0.1";
 };
 
-const verifyVnpCallbackQuery = (query, secretKey) => {
+export const verifyVnpCallbackQuery = (query, secretKey) => {
     const secureHash = query.vnp_SecureHash;
     if (!secureHash) {
         return { valid: false, vnpParams: {} };
@@ -131,6 +132,7 @@ const verifyVnpCallbackQuery = (query, secretKey) => {
 // POST /api/payments/vnpay/create
 export const createVnpayPaymentUrl = async (req, res) => {
     try {
+        await expireStaleVnpayBookings();
         const { bookingId, bankCode } = req.body;
         if (!bookingId) {
             return res.status(400).json({ success: false, message: "Thiếu mã đơn đặt phòng (bookingId)." });
@@ -332,6 +334,15 @@ const settleVnpayTransaction = async (vnpParams) => {
             alreadyPaid: true,
             rspCode: "02",
             message: "Đơn đặt phòng đã được thanh toán và xác nhận trước đó.",
+            booking,
+        };
+    }
+
+    if (booking.status === "cancelled") {
+        return {
+            ok: false,
+            rspCode: "02",
+            message: "Đơn đặt phòng đã bị hủy hoặc quá thời hạn thanh toán (15 phút). Vui lòng đặt phòng mới.",
             booking,
         };
     }

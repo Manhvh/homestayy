@@ -9,8 +9,9 @@ const HotelCard = ({ room }) => {
   const hotel = room.hotel || {};
   const images = Array.isArray(room.images) && room.images.length > 0 ? room.images : [assets.roomImg1];
   const isFav = isFavoriteRoom(roomId);
-  const avgRating = room.averageRating ? Number(room.averageRating).toFixed(1) : "5.0";
   const revCount = room.reviewCount ?? (room.reviews?.length || 0);
+  const hasReviews = revCount > 0 && Number(room.averageRating) > 0;
+  const avgRating = hasReviews ? Number(room.averageRating).toFixed(1) : null;
 
   const buildRoomUrl = () => {
     const params = new URLSearchParams();
@@ -89,16 +90,24 @@ const HotelCard = ({ room }) => {
 
             {/* Star Rating */}
             <div className='flex items-center gap-1'>
-              <div className='flex items-center gap-1'>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <svg key={star} className={`w-4 h-4 ${star <= Math.round(Number(avgRating)) ? "text-yellow-400" : "text-gray-300"}`} fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
-              </div>
-              <span className="text-sm text-gray-500 ml-1">
-                {avgRating} ({revCount > 0 ? `${revCount} đánh giá` : "Mới"})
-              </span>
+              {hasReviews ? (
+                <>
+                  <div className='flex items-center gap-1'>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <svg key={star} className={`w-4 h-4 ${star <= Math.round(Number(avgRating)) ? "text-yellow-400" : "text-gray-300"}`} fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-500 ml-1">
+                    {avgRating} ({revCount} đánh giá)
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  Mới • Chưa có đánh giá
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -158,10 +167,16 @@ const HotelCard = ({ room }) => {
                         </div>
                     </div>
                     <div className='flex items-center gap-1 flex-shrink-0 ml-2'>
-                        <img src={assets.starIconFilled} alt="starIcon" className="w-4 h-4"/>
-                        <span className="text-sm font-medium text-gray-700">{avgRating}</span>
-                        {revCount > 0 && (
-                          <span className="text-xs text-gray-400">({revCount})</span>
+                        {hasReviews ? (
+                          <>
+                            <img src={assets.starIconFilled} alt="starIcon" className="w-4 h-4"/>
+                            <span className="text-sm font-medium text-gray-700">{avgRating}</span>
+                            <span className="text-xs text-gray-400">({revCount})</span>
+                          </>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            Mới
+                          </span>
                         )}
                     </div>
                 </div>
@@ -169,18 +184,18 @@ const HotelCard = ({ room }) => {
                 {/* Location */}
                 <div className='flex items-center gap-2 text-sm text-gray-600 mb-3 flex-shrink-0'>
                     <img src={assets.locationIcon} alt="locationIcon" className="w-4 h-4 flex-shrink-0"/>
-                    <span className="truncate">{room.hotel.address}</span>
+                    <span className="truncate">{hotel.address || "Việt Nam"}</span>
                 </div>
 
                 {/* Amenities preview */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap flex-grow min-h-0">
-                    {room.amenities.slice(0, 2).map((amenity, idx) => (
+                    {(Array.isArray(room.amenities) ? room.amenities : []).slice(0, 2).map((amenity, idx) => (
                         <span key={idx}
                               className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md flex-shrink-0">
                   {amenity}
                 </span>
                     ))}
-                    {room.amenities.length > 2 && (
+                    {Array.isArray(room.amenities) && room.amenities.length > 2 && (
                         <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md flex-shrink-0">
                   +{room.amenities.length - 2} tiện ích khác
                 </span>

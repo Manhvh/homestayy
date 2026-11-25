@@ -60,6 +60,27 @@ export const optionalProtect = async (req, res, next) => {
     }
 };
 
+// Middleware to check if user is Hotel Owner (or Admin)
+export const ownerProtect = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: "Chưa xác thực người dùng." });
+        }
+
+        if (req.user.role !== "hotelOwner" && req.user.role !== "admin") {
+            return res.status(403).json({
+                success: false,
+                message: "Quyền truy cập bị từ chối: Chỉ dành cho Chủ Homestay hoặc Quản trị viên.",
+            });
+        }
+
+        next();
+    } catch (error) {
+        console.error("Owner middleware error:", error);
+        return res.status(500).json({ success: false, message: "Lỗi phân quyền chủ homestay." });
+    }
+};
+
 // Middleware to check if user is Admin
 export const adminProtect = async (req, res, next) => {
     try {

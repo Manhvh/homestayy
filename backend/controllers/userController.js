@@ -1,4 +1,4 @@
-import { getUploadedFileUrl } from "../middleware/uploadMiddleware.js";
+import { uploadSingleImage, deleteCloudinaryImage } from "../middleware/uploadMiddleware.js";
 
 // GET /api/user/
 export const getUserData = async (req, res) => {
@@ -12,22 +12,18 @@ export const getUserData = async (req, res) => {
     }
 };
 
-// POST /api/user/sync
+// POST /api/user/sync (email is immutable to prevent unverified account email takeover)
 export const syncUserData = async (req, res) => {
     try {
-        const { email, username, image } = req.body;
+        const { username, image } = req.body;
         let updated = false;
 
-        if (email && req.user.email !== email) {
-            req.user.email = email;
+        if (username && String(username).trim() && req.user.username !== String(username).trim()) {
+            req.user.username = String(username).trim();
             updated = true;
         }
-        if (username && req.user.username !== username) {
-            req.user.username = username;
-            updated = true;
-        }
-        if (image && req.user.image !== image) {
-            req.user.image = image;
+        if (image && String(image).trim() && req.user.image !== String(image).trim()) {
+            req.user.image = String(image).trim();
             updated = true;
         }
 
@@ -87,13 +83,18 @@ export const updateUserProfile = async (req, res) => {
             user.phone = phone.trim();
         }
 
+        const previousImage = user.image;
         if (req.file) {
-            user.image = getUploadedFileUrl(req, req.file.filename);
+            user.image = await uploadSingleImage(req, req.file, "homestay/avatars");
         } else if (req.body.image !== undefined && req.body.image.trim()) {
             user.image = req.body.image.trim();
         }
 
         await user.save();
+
+        if (req.file && previousImage && previousImage !== user.image) {
+            deleteCloudinaryImage(previousImage);
+        }
 
         res.json({
             success: true,
