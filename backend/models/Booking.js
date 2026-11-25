@@ -44,6 +44,21 @@ const Booking = sequelize.define("Booking", {
         type: DataTypes.STRING(100),
         defaultValue: "Pay At Hotel",
     },
+    isPaid: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    paidAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+    },
+    transactionRef: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        defaultValue: null,
+    },
     isSendMail: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

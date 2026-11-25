@@ -45,6 +45,9 @@ const RoomDetails = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [isBooked, setIsBooked] = useState(false);
+  const [bookedDates, setBookedDates] = useState([]);
+  const [loadingBookedDates, setLoadingBookedDates] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("Pay At Hotel");
 
   // Close modal helper
   const closeModal = useCallback(() => {
@@ -153,7 +156,23 @@ const RoomDetails = () => {
     }
   }, [axios]);
 
-  // Fetch room details: from rooms in context or directly from API
+  // Fetch booked date ranges for this room
+  const fetchBookedDates = useCallback(async (roomId) => {
+    if (!roomId) return;
+    try {
+      setLoadingBookedDates(true);
+      const { data } = await axios.get(`/api/bookings/room/${roomId}/booked-dates`);
+      if (data.success) {
+        setBookedDates(data.bookedDates || []);
+      }
+    } catch (error) {
+      console.log("Fetch booked dates error:", error.message);
+    } finally {
+      setLoadingBookedDates(false);
+    }
+  }, [axios]);
+
+  // Fetch room details: from rooms in context or directly from API (with auth token for owner/admin preview)
   const fetchRoomDetails = useCallback(async () => {
     try {
       setLoading(true);
@@ -166,17 +185,23 @@ const RoomDetails = () => {
         setRoom(found);
         setMainImage(found.images?.[0] || assets.roomImg1);
         const hotelId = found.hotel?.id || found.hotel?._id || found.hotelId;
+        const rId = found.id || found._id || id;
         if (hotelId) fetchReviews(hotelId);
+        if (rId) fetchBookedDates(rId);
         setLoading(false);
         return;
       }
 
-      const { data } = await axios.get(`/api/rooms/${id}`);
+      const token = await getToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const { data } = await axios.get(`/api/rooms/${id}`, { headers });
       if (data.success && data.room) {
         setRoom(data.room);
         setMainImage(data.room.images?.[0] || assets.roomImg1);
         const hotelId = data.room.hotel?.id || data.room.hotel?._id || data.room.hotelId;
+        const rId = data.room.id || data.room._id || id;
         if (hotelId) fetchReviews(hotelId);
+        if (rId) fetchBookedDates(rId);
       } else {
         setRoom(null);
       }
@@ -186,7 +211,7 @@ const RoomDetails = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, rooms, axios, fetchReviews]);
+  }, [id, rooms, axios, getToken, fetchReviews, fetchBookedDates]);
 
   useEffect(() => {
     if (id) {
@@ -247,10 +272,16 @@ const RoomDetails = () => {
   // Require user to be logged in before opening booking popup
   const handleOpenBookingModal = () => {
     if (isLoading || isBooking || isBooked) return;
+    if (room?.hotel?.status && room.hotel.status !== "approved") {
+      toast.error("Homestay này chưa được phê duyệt công khai nên tạm thời chưa thể đặt phòng.");
+      return;
+    }
     if (!user) {
       openLoginModal();
       return;
     }
+    const rId = room?.id || room?._id || id;
+    if (rId) fetchBookedDates(rId);
     setShowBookingModal(true);
   };
 
@@ -293,7 +324,7 @@ const RoomDetails = () => {
           checkInDate,
           checkOutDate,
           guests,
-          paymentMethod: "Pay At Hotel",
+          paymentMethod,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -302,6 +333,32 @@ const RoomDetails = () => {
 
       if (data.success) {
         setIsBooked(true);
+        const createdBookingId = data.booking?.id || data.booking?._id;
+
+        if (paymentMethod === "VNPay" && createdBookingId) {
+          toast.success("Đã tạo đơn! Đang chuyển tới cổng thanh toán VNPay...");
+          try {
+            const paymentRes = await axios.post(
+              "/api/payments/vnpay/create",
+              { bookingId: createdBookingId },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (paymentRes.data?.success && paymentRes.data?.paymentUrl) {
+              window.location.href = paymentRes.data.paymentUrl;
+              return;
+            }
+            toast.error(paymentRes.data?.message || "Không thể khởi tạo cổng thanh toán VNPay.");
+          } catch (payErr) {
+            toast.error(payErr.response?.data?.message || "Lỗi kết nối VNPay. Bạn có thể thanh toán lại tại Lịch sử đặt phòng.");
+          }
+          setShowBookingModal(false);
+          setIsLoading(false);
+          setIsBooking(false);
+          navigate("/my-bookings");
+          window.scrollTo(0, 0);
+          return;
+        }
+
         toast.success(data.message || "Đặt phòng thành công!");
         setTimeout(() => {
           setShowBookingModal(false);
@@ -417,11 +474,20 @@ const RoomDetails = () => {
   }
 
   const hotelInfo = room.hotel || {};
+  const isHotelApproved = !hotelInfo.status || hotelInfo.status === "approved";
   const roomImages = Array.isArray(room.images) && room.images.length > 0 ? room.images : [assets.roomImg1];
   const activeImage = mainImage || roomImages[0] || assets.roomImg1;
 
   return (
     <div className="py-28 md:py-35 px-4 md:px-16 lg:px-24 xl:px-32 max-w-7xl mx-auto">
+      {/* Owner / Admin Preview Notice if Homestay is Pending or Rejected */}
+      {!isHotelApproved && (
+        <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs sm:text-sm font-medium">
+          ⚠️ <strong>Chế độ xem trước ({hotelInfo.status === "pending" ? "Chờ phê duyệt" : "Bị từ chối"}):</strong>{" "}
+          Homestay này hiện chưa hiển thị công khai và tạm khóa đặt phòng cho đến khi được Quản trị viên phê duyệt.
+        </div>
+      )}
+
       {/* Room Details Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-gray-100">
         <div>
@@ -528,10 +594,18 @@ const RoomDetails = () => {
           <button
             type="button"
             onClick={handleOpenBookingModal}
-            disabled={isLoading || isBooking || isBooked}
+            disabled={isLoading || isBooking || isBooked || !isHotelApproved}
             className="w-full mt-5 px-5 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0 text-sm"
           >
-            <span>{isLoading ? "Đang xử lý đặt phòng..." : user ? "Đặt phòng" : "Đăng nhập để đặt phòng"}</span>
+            <span>
+              {!isHotelApproved
+                ? "Homestay chưa được phê duyệt"
+                : isLoading
+                ? "Đang xử lý đặt phòng..."
+                : user
+                ? "Đặt phòng"
+                : "Đăng nhập để đặt phòng"}
+            </span>
           </button>
           {!user && (
             <p className="text-[11px] text-amber-700 bg-amber-50/80 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2.5 text-center flex items-center justify-center gap-1.5">
@@ -676,7 +750,12 @@ const RoomDetails = () => {
 
         {/* Form to submit review */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-10">
-          <h3 className="text-base font-bold text-gray-800 mb-3">Đánh giá</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h3 className="text-base font-bold text-gray-800">Viết đánh giá của bạn</h3>
+            <span className="text-[11px] text-gray-500">
+              * Chỉ dành cho khách hàng có đơn đặt phòng đã được xác nhận
+            </span>
+          </div>
           {user ? (
             <form onSubmit={handleReviewSubmit} className="space-y-4">
               <div>
@@ -737,12 +816,10 @@ const RoomDetails = () => {
                 .slice((reviewPage - 1) * REVIEW_PAGE_SIZE, reviewPage * REVIEW_PAGE_SIZE)
                 .map((rev) => {
                   const revId = rev._id || rev.id;
+                  // Only review author or Admin can delete reviews (owners can reply instead)
                   const canDelete =
                     user &&
-                    (String(user.id) === String(rev.userId) ||
-                      String(user.id) === String(hotelInfo.ownerId) ||
-                      String(user.id) === String(hotelInfo.owner?.id) ||
-                      user.role === "admin");
+                    (String(user.id) === String(rev.userId) || user.role === "admin");
 
                   return (
                     <div key={revId} className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -755,7 +832,7 @@ const RoomDetails = () => {
                           />
                           <div>
                             <p className="font-semibold text-sm text-gray-800">{rev.user?.username || "Khách hàng"}</p>
-                            <p className="text-xs text-gray-400">{new Date(rev.createdAt).toLocaleDateString()}</p>
+                            <p className="text-xs text-gray-400">{new Date(rev.createdAt).toLocaleDateString("vi-VN")}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -778,6 +855,23 @@ const RoomDetails = () => {
                         </div>
                       </div>
                       <p className="text-sm text-gray-700 mt-2 leading-relaxed">{rev.comment}</p>
+
+                      {/* Owner Reply */}
+                      {rev.ownerReply && (
+                        <div className="mt-3 ml-2 sm:ml-6 p-3.5 bg-blue-50/70 border-l-4 border-blue-500 rounded-r-xl text-xs space-y-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-bold text-blue-900">
+                              Phản hồi từ Chủ nhà ({hotelInfo.name || "Homestay"})
+                            </span>
+                            {rev.repliedAt && (
+                              <span className="text-[11px] text-gray-500">
+                                {new Date(rev.repliedAt).toLocaleDateString("vi-VN")}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-700 leading-relaxed">{rev.ownerReply}</p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -835,10 +929,18 @@ const RoomDetails = () => {
         <button
           type="button"
           onClick={handleOpenBookingModal}
-          disabled={isLoading || isBooking || isBooked}
+          disabled={isLoading || isBooking || isBooked || !isHotelApproved}
           className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm shadow flex items-center gap-1.5 cursor-pointer"
         >
-          <span>{isLoading ? "Đang xử lý..." : user ? "Đặt phòng" : "Đăng nhập để đặt"}</span>
+          <span>
+            {!isHotelApproved
+              ? "Chưa phê duyệt"
+              : isLoading
+              ? "Đang xử lý..."
+              : user
+              ? "Đặt phòng"
+              : "Đăng nhập để đặt"}
+          </span>
         </button>
       </div>
 
@@ -858,6 +960,10 @@ const RoomDetails = () => {
         guests={guests}
         setGuests={setGuests}
         setSearchDates={setSearchDates}
+        bookedDates={bookedDates}
+        loadingBookedDates={loadingBookedDates}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
         isAvailable={isAvailable}
         setIsAvailable={setIsAvailable}
         isCheckingAvailability={isCheckingAvailability}

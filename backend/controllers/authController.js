@@ -26,14 +26,18 @@ export const sendVerifyCode = async (req, res) => {
 
         const mailSent = await sendVerificationEmail({ email: cleanEmail, username, code });
 
-        res.json({
+        const responsePayload = {
             success: true,
             mailSent,
-            verifyCode: code,
             message: mailSent
                 ? `Đã gửi mã xác thực tới email ${cleanEmail}!`
                 : `Mã xác thực của bạn là: ${code}`,
-        });
+        };
+        if (!mailSent) {
+            responsePayload.verifyCode = code;
+        }
+
+        res.json(responsePayload);
     } catch (error) {
         console.error("Send verify code error:", error);
         res.status(500).json({ success: false, message: error.message || "Lỗi gửi mã xác thực." });
@@ -189,14 +193,18 @@ export const sendResetCode = async (req, res) => {
 
         const mailSent = await sendPasswordResetEmail({ email: cleanEmail, username: user.username, code });
 
-        res.json({
+        const responsePayload = {
             success: true,
             mailSent,
-            verifyCode: code,
             message: mailSent
                 ? `Đã gửi mã đặt lại mật khẩu tới email ${cleanEmail}!`
                 : `Mã xác thực đặt lại mật khẩu của bạn là: ${code}`,
-        });
+        };
+        if (!mailSent) {
+            responsePayload.verifyCode = code;
+        }
+
+        res.json(responsePayload);
     } catch (error) {
         console.error("Send reset code error:", error);
         res.status(500).json({ success: false, message: error.message || "Lỗi gửi mã đặt lại mật khẩu." });

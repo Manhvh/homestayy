@@ -1,5 +1,6 @@
 import { fn, col } from "sequelize";
 import { User, Hotel, Room, Booking, Review } from "../models/index.js";
+import { buildLast6MonthsRevenue } from "../utils/statsUtils.js";
 
 // GET /api/admin/users
 export const getAllUsers = async (req, res) => {
@@ -50,6 +51,13 @@ export const updateUserRole = async (req, res) => {
             return res.status(400).json({ success: false, message: "Vai trò không hợp lệ." });
         }
 
+        if (String(id) === String(req.user.id) && role !== "admin") {
+            return res.status(400).json({
+                success: false,
+                message: "Bạn không thể tự hạ quyền quản trị viên của chính mình.",
+            });
+        }
+
         const user = await User.findByPk(id);
         if (!user) {
             return res.status(404).json({ success: false, message: "Không tìm thấy người dùng." });
@@ -69,6 +77,14 @@ export const updateUserRole = async (req, res) => {
 export const toggleUserBlock = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (String(id) === String(req.user.id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Bạn không thể tự khóa tài khoản quản trị viên của chính mình.",
+            });
+        }
+
         const user = await User.findByPk(id);
 
         if (!user) {
@@ -173,7 +189,7 @@ export const getAdminStats = async (req, res) => {
             Hotel.count(),
             Hotel.count({ where: { status: "pending" } }),
             Hotel.count({ where: { status: "approved" } }),
-            Booking.findAll({ attributes: ["id", "totalPrice", "status"] }),
+            Booking.findAll({ attributes: ["id", "totalPrice", "status", "isPaid", "paymentMethod", "createdAt", "checkInDate"] }),
             Review.findAll({ attributes: ["id", "rating"] }),
             Booking.findAll({
                 include: [
@@ -181,7 +197,7 @@ export const getAdminStats = async (req, res) => {
                     { model: User, as: "user", attributes: ["id", "username", "email"] }
                 ],
                 order: [["createdAt", "DESC"]],
-                limit: 5,
+                limit: 10,
             }),
             Review.findAll({
                 include: [
@@ -194,9 +210,14 @@ export const getAdminStats = async (req, res) => {
         ]);
 
         const totalBookings = bookings.length;
-        const totalRevenue = bookings
-            .filter((b) => b.status !== "cancelled")
-            .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+        const confirmedBookingsList = bookings.filter((b) => b.status === "confirmed");
+        const confirmedBookings = confirmedBookingsList.length;
+        const totalRevenue = confirmedBookingsList.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
+        const paidBookings = bookings.filter((b) => b.isPaid).length;
+        const onlineRevenue = confirmedBookingsList
+            .filter((b) => b.isPaid)
+            .reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
+        const monthlyRevenue = buildLast6MonthsRevenue(bookings);
 
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
@@ -212,7 +233,11 @@ export const getAdminStats = async (req, res) => {
                 pendingHotels,
                 approvedHotels,
                 totalBookings,
+                confirmedBookings,
+                paidBookings,
                 totalRevenue,
+                onlineRevenue,
+                monthlyRevenue,
                 totalReviews,
                 averageRating,
                 recentBookings,

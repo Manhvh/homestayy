@@ -8,7 +8,8 @@ import toast from 'react-hot-toast';
 const PAGE_SIZE = 10;
 
 const AdminUsers = () => {
-    const { axios, getToken } = useAppContext();
+    const { axios, getToken, user: currentUser } = useAppContext();
+    const currentUserId = String(currentUser?.id || currentUser?._id || '');
     const [users, setUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -33,6 +34,10 @@ const AdminUsers = () => {
     }, [axios, getToken]);
 
     const handleRoleChange = async (userId, newRole) => {
+        if (String(userId) === currentUserId && newRole !== 'admin') {
+            toast.error("Bạn không thể tự hạ quyền quản trị viên của chính mình.");
+            return;
+        }
         try {
             const token = await getToken();
             const { data } = await axios.put(`/api/admin/users/${userId}/role`, { role: newRole }, {
@@ -45,11 +50,15 @@ const AdminUsers = () => {
                 toast.error(data.message);
             }
         } catch (error) {
-            toast.error(error.message);
+            toast.error(error.response?.data?.message || error.message);
         }
     };
 
     const handleToggleBlock = async (userId) => {
+        if (String(userId) === currentUserId) {
+            toast.error("Bạn không thể tự khóa tài khoản quản trị viên của chính mình.");
+            return;
+        }
         try {
             const token = await getToken();
             const { data } = await axios.put(`/api/admin/users/${userId}/status`, {}, {
@@ -62,7 +71,7 @@ const AdminUsers = () => {
                 toast.error(data.message);
             }
         } catch (error) {
-            toast.error(error.message);
+            toast.error(error.response?.data?.message || error.message);
         }
     };
 
@@ -126,8 +135,9 @@ const AdminUsers = () => {
                             <tbody className="divide-y divide-gray-100">
                                 {paginatedUsers.map((user) => {
                                     const userId = user.id || user._id;
+                                    const isSelf = String(userId) === currentUserId;
                                     return (
-                                        <tr key={userId} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={userId} className={`transition-colors ${isSelf ? 'bg-purple-50/40' : 'hover:bg-gray-50'}`}>
                                             <td className="py-3 px-4">
                                                 <div className="flex items-center gap-3">
                                                     <img
@@ -136,7 +146,14 @@ const AdminUsers = () => {
                                                         className="w-9 h-9 rounded-full object-cover border border-gray-200"
                                                     />
                                                     <div>
-                                                        <p className="font-semibold text-gray-900">{user.username}</p>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <p className="font-semibold text-gray-900">{user.username}</p>
+                                                            {isSelf && (
+                                                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-purple-100 text-purple-700 border border-purple-200">
+                                                                    Bạn
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         {user.hotel && (
                                                             <span className="text-[10px] text-blue-600 font-medium">
                                                                 Chủ homestay: {user.hotel.name}
@@ -156,8 +173,10 @@ const AdminUsers = () => {
                                             <td className="py-3 px-4 text-center">
                                                 <select
                                                     value={user.role}
+                                                    disabled={isSelf}
+                                                    title={isSelf ? "Không thể tự thay đổi vai trò của chính mình" : "Thay đổi vai trò"}
                                                     onChange={e => handleRoleChange(userId, e.target.value)}
-                                                    className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white text-gray-700 outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer shadow-2xs"
+                                                    className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white text-gray-700 outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer shadow-2xs disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                                                 >
                                                     <option value="user">Khách hàng</option>
                                                     <option value="hotelOwner">Chủ homestay</option>
@@ -178,16 +197,25 @@ const AdminUsers = () => {
                                             </td>
 
                                             <td className="py-3 px-4 text-center">
-                                                <button
-                                                    onClick={() => handleToggleBlock(userId)}
-                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
-                                                        user.isBlocked
-                                                            ? "bg-green-600 hover:bg-green-700 text-white"
-                                                            : "border border-red-200 text-red-600 hover:bg-red-50"
-                                                    }`}
-                                                >
-                                                    {user.isBlocked ? "Mở khóa" : "Khóa tài khoản"}
-                                                </button>
+                                                {isSelf ? (
+                                                    <span
+                                                        className="inline-block px-3 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                                                        title="Không thể tự khóa tài khoản của chính mình"
+                                                    >
+                                                        Tài khoản hiện tại
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleToggleBlock(userId)}
+                                                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                                                            user.isBlocked
+                                                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                                                : "border border-red-200 text-red-600 hover:bg-red-50"
+                                                        }`}
+                                                    >
+                                                        {user.isBlocked ? "Mở khóa" : "Khóa tài khoản"}
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     );

@@ -35,6 +35,31 @@ export const protect = async (req, res, next) => {
     }
 };
 
+// Optional authentication middleware: attaches req.user when a valid token is present without blocking guests
+export const optionalProtect = async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return next();
+        }
+
+        const token = authHeader.split(" ")[1];
+        const decoded = verifyToken(token);
+        if (!decoded || !decoded.userId) {
+            return next();
+        }
+
+        const user = await User.findByPk(decoded.userId);
+        if (user && !user.isBlocked) {
+            req.user = user;
+            req.user._id = user.id;
+        }
+        next();
+    } catch {
+        next();
+    }
+};
+
 // Middleware to check if user is Admin
 export const adminProtect = async (req, res, next) => {
     try {

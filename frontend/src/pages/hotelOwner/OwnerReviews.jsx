@@ -18,10 +18,15 @@ const OwnerReviews = () => {
   });
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState(null);
+
+  // Reply states
+  const [replyingReviewId, setReplyingReviewId] = useState(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
 
   // Filters
   const [filterStar, setFilterStar] = useState("all");
+  const [filterReplyStatus, setFilterReplyStatus] = useState("all"); // all | replied | pending
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -53,29 +58,47 @@ const OwnerReviews = () => {
     }
   }, [axios, getToken]);
 
-  const handleDeleteReview = async (reviewId) => {
-    if (deletingId) return;
-    if (!window.confirm("Bạn có chắc chắn muốn xóa đánh giá này khỏi homestay của bạn?")) {
+  const handleOpenReplyForm = (review) => {
+    const revId = review.id || review._id;
+    setReplyingReviewId(revId);
+    setReplyDraft(review.ownerReply || "");
+  };
+
+  const handleCancelReply = () => {
+    if (submittingReply) return;
+    setReplyingReviewId(null);
+    setReplyDraft("");
+  };
+
+  const handleSubmitReply = async (e, reviewId) => {
+    e.preventDefault();
+    if (submittingReply) return;
+    if (!replyDraft.trim()) {
+      toast.error("Vui lòng nhập nội dung phản hồi cho khách hàng.");
       return;
     }
 
     try {
-      setDeletingId(reviewId);
+      setSubmittingReply(true);
       const token = await getToken();
-      const { data } = await axios.delete(`/api/reviews/${reviewId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { data } = await axios.put(
+        `/api/reviews/${reviewId}/reply`,
+        { ownerReply: replyDraft.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       if (data.success) {
-        toast.success(data.message);
+        toast.success(data.message || "Đã gửi phản hồi đánh giá thành công!");
+        setReplyingReviewId(null);
+        setReplyDraft("");
         fetchOwnerReviews();
       } else {
-        toast.error(data.message);
+        toast.error(data.message || "Không thể gửi phản hồi.");
       }
     } catch (error) {
       toast.error(error.response?.data?.message || error.message);
     } finally {
-      setDeletingId(null);
+      setSubmittingReply(false);
     }
   };
 
@@ -91,21 +114,33 @@ const OwnerReviews = () => {
       if (filterStar !== "all" && Number(r.rating) !== Number(filterStar)) {
         return false;
       }
+      if (filterReplyStatus === "replied" && !r.ownerReply) {
+        return false;
+      }
+      if (filterReplyStatus === "pending" && r.ownerReply) {
+        return false;
+      }
       if (kw) {
         const userStr = String(r.user?.username || "").toLowerCase();
         const commentStr = String(r.comment || "").toLowerCase();
         const roomStr = String(r.room?.roomType || "").toLowerCase();
-        if (!userStr.includes(kw) && !commentStr.includes(kw) && !roomStr.includes(kw)) {
+        const replyStr = String(r.ownerReply || "").toLowerCase();
+        if (
+          !userStr.includes(kw) &&
+          !commentStr.includes(kw) &&
+          !roomStr.includes(kw) &&
+          !replyStr.includes(kw)
+        ) {
           return false;
         }
       }
       return true;
     });
-  }, [reviews, filterStar, searchKeyword]);
+  }, [reviews, filterStar, filterReplyStatus, searchKeyword]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStar, searchKeyword]);
+  }, [filterStar, filterReplyStatus, searchKeyword]);
 
   const paginatedReviews = useMemo(() => {
     const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -114,17 +149,18 @@ const OwnerReviews = () => {
 
   const total = stats.totalReviews || 0;
   const breakdown = stats.ratingBreakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  const repliedCount = useMemo(() => reviews.filter((r) => Boolean(r.ownerReply)).length, [reviews]);
 
   return (
     <div className="space-y-8">
       <Title
         align="left"
         font="outfit"
-        title="Quản Lý Đánh Giá Khách Hàng"
+        title="Quản Lý & Phản Hồi Đánh Giá"
         subTitle={
           hotelInfo
-            ? `Xem điểm bình chọn sao và quản lý các đánh giá của khách hàng dành cho ${hotelInfo.name}.`
-            : "Xem điểm bình chọn sao và quản lý các đánh giá của khách hàng dành cho homestay của bạn."
+            ? `Theo dõi điểm bình chọn sao và gửi lời phản hồi trực tiếp tới khách hàng đã trải nghiệm tại ${hotelInfo.name}.`
+            : "Theo dõi điểm bình chọn sao và gửi lời phản hồi trực tiếp tới khách hàng của homestay."
         }
       />
 
@@ -138,7 +174,10 @@ const OwnerReviews = () => {
             Điểm bình chọn trung bình / 5.0
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            Tổng cộng <strong>{total}</strong> lượt đánh giá từ khách lưu trú
+            Tổng cộng <strong>{total}</strong> lượt đánh giá • Đã phản hồi{" "}
+            <strong className="text-blue-600">
+              {repliedCount}/{total}
+            </strong>
           </p>
         </div>
 
@@ -169,10 +208,15 @@ const OwnerReviews = () => {
         </div>
       </div>
 
+      {/* Transparency Policy Notice */}
+      <div className="bg-blue-50/70 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-900">
+        <strong>Chính sách minh bạch đánh giá:</strong> Chủ nhà có thể gửi hoặc chỉnh sửa lời phản hồi công khai dưới mỗi đánh giá của khách hàng. Để đảm bảo tính khách quan, chỉ tác giả đánh giá hoặc Quản trị viên mới có quyền xóa đánh giá vi phạm.
+      </div>
+
       {/* Filter Bar */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-gray-600 mr-1">Lọc theo số sao:</span>
+          <span className="text-xs font-semibold text-gray-600 mr-1">Số sao:</span>
           {[
             { label: "Tất cả", value: "all" },
             { label: "5 ★", value: "5" },
@@ -196,13 +240,22 @@ const OwnerReviews = () => {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={filterReplyStatus}
+            onChange={(e) => setFilterReplyStatus(e.target.value)}
+            className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="all">Tất cả trạng thái phản hồi</option>
+            <option value="pending">Chưa phản hồi</option>
+            <option value="replied">Đã phản hồi</option>
+          </select>
           <input
             type="text"
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             placeholder="Tìm theo tên khách hoặc nội dung..."
-            className="w-full sm:w-64 px-3 py-1.5 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full sm:w-56 px-3 py-1.5 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="button"
@@ -234,66 +287,134 @@ const OwnerReviews = () => {
           <div className="space-y-3">
             {paginatedReviews.map((r) => {
               const revId = r.id || r._id;
+              const isReplying = replyingReviewId === revId;
+
               return (
                 <div
                   key={revId}
-                  className="p-5 bg-white border border-gray-200 rounded-xl shadow-xs flex flex-col sm:flex-row sm:items-start justify-between gap-4 hover:border-gray-300 transition"
+                  className="p-5 bg-white border border-gray-200 rounded-xl shadow-xs space-y-3 hover:border-gray-300 transition"
                 >
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={r.user?.image || assets.userIcon}
-                        alt="avatar"
-                        className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                      />
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-gray-900 text-sm">
-                            {r.user?.username || "Khách hàng"}
-                          </span>
-                          {r.room?.roomType && (
-                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
-                              {r.room.roomType}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={r.user?.image || assets.userIcon}
+                          alt="avatar"
+                          className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                        />
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-gray-900 text-sm">
+                              {r.user?.username || "Khách hàng"}
                             </span>
-                          )}
+                            {r.room?.roomType && (
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
+                                {r.room.roomType}
+                              </span>
+                            )}
+                            {r.ownerReply ? (
+                              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Đã phản hồi
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                Chưa phản hồi
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            {r.user?.email}
+                            {r.user?.phone ? ` • SĐT: ${r.user.phone}` : ""}
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-400">
-                          {r.user?.email}
-                          {r.user?.phone ? ` • SĐT: ${r.user.phone}` : ""}
-                        </p>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-1.5 text-amber-400 text-sm">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <span
-                          key={star}
-                          className={star <= r.rating ? "text-amber-400" : "text-gray-300"}
-                        >
-                          ★
+                      <div className="flex items-center gap-1.5 text-amber-400 text-sm">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span
+                            key={star}
+                            className={star <= r.rating ? "text-amber-400" : "text-gray-300"}
+                          >
+                            ★
+                          </span>
+                        ))}
+                        <span className="text-xs font-bold text-gray-700 ml-1">
+                          {r.rating}/5 sao
                         </span>
-                      ))}
-                      <span className="text-xs font-bold text-gray-700 ml-1">
-                        {r.rating}/5 sao
-                      </span>
-                      <span className="text-xs text-gray-400 ml-2">
-                        • {new Date(r.createdAt).toLocaleString()}
-                      </span>
+                        <span className="text-xs text-gray-400 ml-2">
+                          • {new Date(r.createdAt).toLocaleString("vi-VN")}
+                        </span>
+                      </div>
+
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        "{r.comment}"
+                      </p>
                     </div>
 
-                    <p className="text-gray-700 text-sm leading-relaxed">
-                      "{r.comment}"
-                    </p>
+                    {!isReplying && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReplyForm(r)}
+                        className="px-3.5 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg self-end sm:self-start transition font-semibold shadow-xs cursor-pointer whitespace-nowrap"
+                      >
+                        {r.ownerReply ? "Sửa phản hồi" : "Phản hồi đánh giá"}
+                      </button>
+                    )}
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={deletingId === revId}
-                    onClick={() => handleDeleteReview(revId)}
-                    className="px-3.5 py-1.5 text-xs border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg self-end sm:self-start transition font-semibold cursor-pointer"
-                  >
-                    {deletingId === revId ? "Đang xóa..." : "Xóa đánh giá"}
-                  </button>
+                  {/* Existing Owner Reply Display */}
+                  {r.ownerReply && !isReplying && (
+                    <div className="bg-blue-50/70 border-l-4 border-blue-500 rounded-r-xl p-3.5 text-xs space-y-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-bold text-blue-900">
+                          Phản hồi của Chủ nhà ({hotelInfo?.name || "Homestay"})
+                        </span>
+                        {r.repliedAt && (
+                          <span className="text-[11px] text-gray-500">
+                            {new Date(r.repliedAt).toLocaleString("vi-VN")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed">{r.ownerReply}</p>
+                    </div>
+                  )}
+
+                  {/* Inline Reply Form */}
+                  {isReplying && (
+                    <form
+                      onSubmit={(e) => handleSubmitReply(e, revId)}
+                      className="bg-gray-50 border border-blue-200 rounded-xl p-4 space-y-3"
+                    >
+                      <label className="block text-xs font-bold text-gray-700">
+                        {r.ownerReply ? "Chỉnh sửa phản hồi của bạn:" : "Viết lời phản hồi tới khách hàng:"}
+                      </label>
+                      <textarea
+                        rows={3}
+                        required
+                        value={replyDraft}
+                        onChange={(e) => setReplyDraft(e.target.value)}
+                        placeholder="Cảm ơn quý khách đã ghé thăm và góp ý cho homestay..."
+                        className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={handleCancelReply}
+                          disabled={submittingReply}
+                          className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={submittingReply}
+                          className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-xs transition cursor-pointer"
+                        >
+                          {submittingReply ? "Đang gửi..." : "Gửi phản hồi"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               );
             })}

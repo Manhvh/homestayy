@@ -13,6 +13,7 @@ import bookingRouter from './routes/bookingRoutes.js';
 import reviewRouter from './routes/reviewRoutes.js';
 import categoryRouter from './routes/categoryRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
+import paymentRouter from './routes/paymentRoutes.js';
 
 // Connect to MySQL, synchronize tables, auto-seed if empty, and verify Nodemailer SMTP connection
 const initServer = async () => {
@@ -60,6 +61,7 @@ app.use('/api/bookings', bookingRouter);
 app.use('/api/reviews', reviewRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/payments', paymentRouter);
 
 // 404 Not Found handler
 app.use((req, res) => {

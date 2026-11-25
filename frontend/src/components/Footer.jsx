@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { assets } from '../assets/assets'
 
 const Footer = () => {
@@ -6,7 +7,9 @@ const Footer = () => {
     <div className=' bg-[#F6F9FC] text-gray-500/80 pt-8 px-6 md:px-16 lg:px-24 xl:px-32'>
             <div className='flex flex-wrap justify-between gap-12 md:gap-6'>
                 <div className='max-w-80'>
-                    <img src={assets.logo} alt="logo" className='invert mb-3 h-8 md:h-9' />
+                    <Link to="/">
+                      <img src={assets.logo} alt="logo" className='invert mb-3 h-8 md:h-9 cursor-pointer' />
+                    </Link>
                     <p className='text-sm leading-relaxed'>
                         Khám phá những điểm dừng chân tuyệt vời nhất, từ những homestay thơ mộng đến các biệt thự nghỉ dưỡng sang trọng.
                     </p>
@@ -25,38 +28,25 @@ const Footer = () => {
                 <div>
                     <p className=' font-playfair text-lg text-gray-800 font-bold'>VỀ CHÚNG TÔI</p>
                     <ul className='mt-3 flex flex-col gap-2 text-sm'>
-                        <li><a href="/about" className="hover:text-blue-600 transition">Giới thiệu</a></li>
-                        <li><a href="/experience" className="hover:text-blue-600 transition">Trải nghiệm</a></li>
-                        <li><a href="/rooms" className="hover:text-blue-600 transition">Danh sách phòng</a></li>
-                        <li><a href="#" className="hover:text-blue-600 transition">Tin tức & Blog</a></li>
-                        <li><a href="#" className="hover:text-blue-600 transition">Đối tác chủ nhà</a></li>
+                        <li><Link to="/about" className="hover:text-blue-600 transition">Giới thiệu</Link></li>
+                        <li><Link to="/experience" className="hover:text-blue-600 transition">Trải nghiệm</Link></li>
+                        <li><Link to="/rooms" className="hover:text-blue-600 transition">Danh sách phòng</Link></li>
+                        <li><Link to="/blog" className="hover:text-blue-600 transition">Tin tức & Blog</Link></li>
+                        <li><Link to="/host-partners" className="hover:text-blue-600 transition">Đối tác chủ nhà</Link></li>
                     </ul>
                 </div>
 
                 <div>
                     <p className='font-playfair text-lg text-gray-800 font-bold'>HỖ TRỢ KHÁCH HÀNG</p>
                     <ul className='mt-3 flex flex-col gap-2 text-sm'>
-                        <li><a href="#" className="hover:text-blue-600 transition">Trung tâm trợ giúp</a></li>
-                        <li><a href="#" className="hover:text-blue-600 transition">Chính sách bảo mật</a></li>
-                        <li><a href="#" className="hover:text-blue-600 transition">Quy định hủy phòng</a></li>
-                        <li><a href="#" className="hover:text-blue-600 transition">Liên hệ hỗ trợ</a></li>
-                        <li><a href="#" className="hover:text-blue-600 transition">Tiêu chuẩn cộng đồng</a></li>
+                        <li><Link to="/help-center" className="hover:text-blue-600 transition">Trung tâm trợ giúp</Link></li>
+                        <li><Link to="/privacy-policy" className="hover:text-blue-600 transition">Chính sách bảo mật</Link></li>
+                        <li><Link to="/cancellation-policy" className="hover:text-blue-600 transition">Quy định hủy phòng</Link></li>
+                        <li><Link to="/contact" className="hover:text-blue-600 transition">Liên hệ hỗ trợ</Link></li>
+                        <li><Link to="/community-guidelines" className="hover:text-blue-600 transition">Tiêu chuẩn cộng đồng</Link></li>
                     </ul>
                 </div>
 
-                <div className='max-w-80'>
-                    <p className='font-playfair text-lg text-gray-800 font-bold'>NHẬN THÔNG TIN MỚI</p>
-                    <p className='mt-3 text-sm leading-relaxed'>
-                        Đăng ký nhận thông tin khuyến mãi và các ưu đãi homestay mới nhất.
-                    </p>
-                    <div className='flex items-center mt-4'>
-                        <input type="text" className='bg-white rounded-l border border-gray-300 h-9 px-3 outline-none text-sm' placeholder='Nhập email của bạn...' />
-                        <button className='flex items-center justify-center cursor-pointer bg-blue-600 hover:bg-blue-700 transition h-9 w-9 aspect-square rounded-r'>
-                            {/* Arrow icon */}
-                            <img src={assets.arrowIcon} alt="arrow-icon" className='  w-3.5 invert'/>
-                        </button>
-                    </div>
-                </div>
             </div>
             <hr className='border-gray-300 mt-8' />
             <div className='flex flex-col md:flex-row gap-2 items-center justify-between py-5 text-xs text-gray-500'>

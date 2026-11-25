@@ -1,5 +1,12 @@
-import React from "react";
+import React, { useMemo } from "react";
 import toast from "react-hot-toast";
+
+const formatShortViDate = (ymd) => {
+  if (!ymd) return "";
+  const parts = String(ymd).slice(0, 10).split("-");
+  if (parts.length !== 3) return ymd;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
 
 const BookingModal = ({
   isOpen,
@@ -16,6 +23,10 @@ const BookingModal = ({
   guests,
   setGuests,
   setSearchDates,
+  bookedDates = [],
+  loadingBookedDates = false,
+  paymentMethod = "Pay At Hotel",
+  setPaymentMethod = () => {},
   isAvailable,
   setIsAvailable,
   isCheckingAvailability,
@@ -27,6 +38,19 @@ const BookingModal = ({
   estimatedTotal,
   onSubmitHandler,
 }) => {
+  const overlappingBookedRange = useMemo(() => {
+    if (!checkInDate || !checkOutDate || !Array.isArray(bookedDates) || bookedDates.length === 0) {
+      return null;
+    }
+    return bookedDates.find(
+      (range) =>
+        range.checkInDate &&
+        range.checkOutDate &&
+        checkInDate < range.checkOutDate &&
+        checkOutDate > range.checkInDate
+    );
+  }, [checkInDate, checkOutDate, bookedDates]);
+
   if (!isOpen || !room) return null;
 
   return (
@@ -86,7 +110,7 @@ const BookingModal = ({
         )}
 
         {/* Price Preview Card */}
-        <div className="bg-blue-50/70 border border-blue-200/60 rounded-2xl p-4 mb-5 flex items-center justify-between">
+        <div className="bg-blue-50/70 border border-blue-200/60 rounded-2xl p-4 mb-4 flex items-center justify-between gap-2">
           <div>
             <p className="text-xs text-blue-700 font-medium mb-0.5">Giá tiêu chuẩn</p>
             <p className="text-xl font-extrabold text-gray-900">
@@ -94,14 +118,51 @@ const BookingModal = ({
               <span className="text-xs font-normal text-gray-500">/ đêm</span>
             </p>
           </div>
-          <span className="text-xs font-semibold px-3 py-1 bg-green-100 text-green-700 rounded-full border border-green-200">
-            Thanh toán tại chỗ
+          <span
+            className={`text-xs font-semibold px-3 py-1 rounded-full border whitespace-nowrap ${
+              paymentMethod === "VNPay"
+                ? "bg-blue-100 text-blue-700 border-blue-200"
+                : "bg-green-100 text-green-700 border-green-200"
+            }`}
+          >
+            {paymentMethod === "VNPay" ? "VNPay Online" : "Thanh toán tại chỗ"}
           </span>
+        </div>
+
+        {/* Booked Date Ranges Notice */}
+        <div className="mb-4 p-3.5 rounded-2xl border border-gray-200 bg-gray-50/80 text-xs">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="font-bold text-gray-800 uppercase tracking-wide text-[11px]">
+              Lịch đã có khách đặt (Ngày kín)
+            </span>
+            {loadingBookedDates && (
+              <span className="text-[11px] text-gray-400">Đang tải lịch...</span>
+            )}
+          </div>
+          {!loadingBookedDates && bookedDates.length === 0 ? (
+            <p className="text-emerald-700 font-medium">
+              ✓ Phòng hiện đang trống hoàn toàn trong thời gian sắp tới.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {bookedDates.map((range, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-semibold text-[11px]"
+                >
+                  <span>●</span>
+                  <span>
+                    {formatShortViDate(range.checkInDate)} → {formatShortViDate(range.checkOutDate)}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Seasonal pricing info if available inside modal */}
         {room.seasonalPricing && room.seasonalPricing.length > 0 && (
-          <div className="mb-5 p-3.5 bg-amber-50/60 border border-amber-200/70 rounded-xl text-xs">
+          <div className="mb-4 p-3.5 bg-amber-50/60 border border-amber-200/70 rounded-xl text-xs">
             <p className="font-semibold text-amber-900 mb-1.5">
               Bảng giá theo mùa / dịp lễ:
             </p>
@@ -165,6 +226,18 @@ const BookingModal = ({
             </div>
           </div>
 
+          {/* Instant conflict warning */}
+          {overlappingBookedRange && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-medium">
+              ⚠️ Khoảng ngày bạn chọn trùng với lịch đã kín (
+              <strong>
+                {formatShortViDate(overlappingBookedRange.checkInDate)} →{" "}
+                {formatShortViDate(overlappingBookedRange.checkOutDate)}
+              </strong>
+              ). Vui lòng chọn khoảng ngày khác.
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label htmlFor="modalGuests" className="block text-xs font-bold text-gray-700 uppercase tracking-wide">
@@ -204,6 +277,66 @@ const BookingModal = ({
             </p>
           </div>
 
+          {/* Payment Method Selector */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+              Phương thức thanh toán *
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("Pay At Hotel")}
+                className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                  paymentMethod === "Pay At Hotel"
+                    ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-500"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-900">Thanh toán tại Homestay</span>
+                  <span
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      paymentMethod === "Pay At Hotel" ? "border-blue-600" : "border-gray-300"
+                    }`}
+                  >
+                    {paymentMethod === "Pay At Hotel" && (
+                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                    )}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Trả tiền mặt / chuyển khoản trực tiếp khi nhận phòng
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("VNPay")}
+                className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                  paymentMethod === "VNPay"
+                    ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-500"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-blue-700">Thanh toán VNPay</span>
+                  <span
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      paymentMethod === "VNPay" ? "border-blue-600" : "border-gray-300"
+                    }`}
+                  >
+                    {paymentMethod === "VNPay" && (
+                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                    )}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Thanh toán trực tuyến VNPay Sandbox (tự động duyệt đơn)
+                </p>
+              </button>
+            </div>
+          </div>
+
           {/* Nights & Estimated Price Summary */}
           {numberOfNights > 0 && (
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-2 mt-4 text-xs">
@@ -227,7 +360,11 @@ const BookingModal = ({
               )}
               <div className="flex justify-between text-gray-600">
                 <span>Hình thức thanh toán:</span>
-                <strong className="text-gray-900">Thanh toán tại homestay</strong>
+                <strong className={paymentMethod === "VNPay" ? "text-blue-700" : "text-gray-900"}>
+                  {paymentMethod === "VNPay"
+                    ? "Thanh toán trực tuyến VNPay"
+                    : "Thanh toán tại homestay"}
+                </strong>
               </div>
 
               <div className="pt-2 border-t border-gray-200 flex justify-between items-baseline text-sm">
@@ -240,9 +377,10 @@ const BookingModal = ({
           )}
 
           {/* Availability feedback */}
-          {isAvailable && (
+          {isAvailable && !overlappingBookedRange && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs font-medium">
-              Phòng đang còn trống trong thời gian này! Bạn có thể bấm Đặt phòng ngay.
+              Phòng đang còn trống trong thời gian này! Bạn có thể bấm{" "}
+              {paymentMethod === "VNPay" ? "Đặt phòng & Thanh toán VNPay" : "Xác nhận đặt phòng ngay"}.
             </div>
           )}
 
@@ -258,14 +396,22 @@ const BookingModal = ({
             </button>
             <button
               type="submit"
-              disabled={isLoading || isCheckingAvailability || isBooking || isBooked}
+              disabled={
+                isLoading ||
+                isCheckingAvailability ||
+                isBooking ||
+                isBooked ||
+                Boolean(overlappingBookedRange)
+              }
               className={`w-full sm:w-2/3 px-6 py-3 rounded-xl font-bold text-white text-sm transition-all shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
                 isBooked
                   ? "bg-green-600"
                   : isLoading || isBooking
                   ? "bg-blue-500"
                   : isAvailable
-                  ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 animate-pulse"
+                  ? paymentMethod === "VNPay"
+                    ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200"
+                    : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 animate-pulse"
                   : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"
               }`}
             >
@@ -275,13 +421,21 @@ const BookingModal = ({
               {!user ? (
                 <span>Đăng nhập để đặt phòng</span>
               ) : isBooked ? (
-                <span>Đã đặt phòng thành công! Đang chuyển hướng...</span>
+                <span>
+                  {paymentMethod === "VNPay"
+                    ? "Đang chuyển tới cổng VNPay..."
+                    : "Đã đặt phòng thành công! Đang chuyển hướng..."}
+                </span>
               ) : isLoading || isBooking ? (
                 <span>Đang xử lý đặt phòng...</span>
               ) : isCheckingAvailability ? (
                 <span>Đang kiểm tra lịch trống...</span>
               ) : isAvailable ? (
-                <span>Xác nhận đặt phòng ngay</span>
+                <span>
+                  {paymentMethod === "VNPay"
+                    ? "Đặt phòng & Thanh toán VNPay"
+                    : "Xác nhận đặt phòng ngay"}
+                </span>
               ) : (
                 <span>Kiểm tra lịch phòng trống</span>
               )}

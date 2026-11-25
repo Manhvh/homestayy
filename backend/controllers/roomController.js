@@ -89,7 +89,7 @@ export const getRooms = async (req, res) => {
                     model: Hotel,
                     as: "hotel",
                     where: {
-                        status: { [Op.ne]: "rejected" }
+                        status: "approved"
                     },
                     include: [
                         {
@@ -154,7 +154,7 @@ export const getOwnerRooms = async (req, res) => {
     try {
         const hotelData = await Hotel.findOne({ where: { ownerId: req.user.id } });
         if (!hotelData) {
-            return res.json({ success: true, rooms: [] });
+            return res.json({ success: true, hotel: null, rooms: [] });
         }
 
         const rooms = await Room.findAll({
@@ -163,7 +163,7 @@ export const getOwnerRooms = async (req, res) => {
             order: [["createdAt", "DESC"]],
         });
 
-        res.json({ success: true, rooms });
+        res.json({ success: true, hotel: hotelData, rooms });
     } catch (error) {
         console.error("Get owner rooms error:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -276,8 +276,20 @@ export const getRoomById = async (req, res) => {
             ]
         });
 
-        if (!room) {
+        if (!room || !room.hotel) {
             return res.status(404).json({ success: false, message: "Không tìm thấy thông tin phòng nghỉ." });
+        }
+
+        // Only allow viewing pending/rejected homestay rooms for the homestay owner or Admin
+        if (room.hotel.status !== "approved") {
+            const isOwner = req.user && String(req.user.id) === String(room.hotel.ownerId);
+            const isAdmin = req.user && req.user.role === "admin";
+            if (!isOwner && !isAdmin) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Phòng nghỉ không tồn tại hoặc Homestay chưa được phê duyệt công khai.",
+                });
+            }
         }
 
         res.json({ success: true, room });

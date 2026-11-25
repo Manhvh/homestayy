@@ -33,7 +33,7 @@ const Hotel = sequelize.define("Hotel", {
     },
     status: {
         type: DataTypes.ENUM("pending", "approved", "rejected"),
-        defaultValue: "approved",
+        defaultValue: "pending",
     },
     ownerId: {
         type: DataTypes.STRING(255),

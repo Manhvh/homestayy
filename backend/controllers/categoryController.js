@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import { Category } from "../models/index.js";
 
 const DEFAULT_AMENITIES = [
@@ -85,6 +86,53 @@ export const addCategory = async (req, res) => {
         res.json({ success: true, message: "Thêm danh mục thành công!", category });
     } catch (error) {
         console.error("Add category error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// PUT /api/categories/:id (Admin only)
+export const updateCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, type, icon, description } = req.body;
+
+        const category = await Category.findByPk(id);
+        if (!category) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy danh mục cần sửa." });
+        }
+
+        const nextName = name !== undefined ? String(name).trim() : category.name;
+        const nextType = type !== undefined ? String(type).trim() : category.type;
+
+        if (!nextName) {
+            return res.status(400).json({ success: false, message: "Tên danh mục không được để trống." });
+        }
+
+        if (!["amenity", "city"].includes(nextType)) {
+            return res.status(400).json({ success: false, message: "Loại danh mục phải là 'amenity' hoặc 'city'." });
+        }
+
+        const duplicate = await Category.findOne({
+            where: {
+                name: nextName,
+                type: nextType,
+                id: { [Op.ne]: id },
+            },
+        });
+        if (duplicate) {
+            return res.status(400).json({ success: false, message: "Tên danh mục này đã tồn tại trong cùng phân loại." });
+        }
+
+        category.name = nextName;
+        category.type = nextType;
+        if (icon !== undefined) category.icon = String(icon).trim();
+        if (description !== undefined) category.description = String(description).trim();
+
+        await category.save();
+
+        res.json({ success: true, message: "Cập nhật danh mục thành công!", category });
+    } catch (error) {
+        console.error("Update category error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

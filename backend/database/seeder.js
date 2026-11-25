@@ -312,7 +312,7 @@ export const seedDatabase = async () => {
 
         // ==========================================
         // 4. SEED ROOMS (Phòng nghỉ kèm giá theo mùa)
-        // Mức giá từ 100.000 VNĐ đến dưới 1.000.000 VNĐ
+        // Đa dạng mức giá từ 160.000 VNĐ đến 1.450.000 VNĐ (hỗ trợ trần giá động)
         // ==========================================
         const roomsData = [
             // Rooms for Mây Lang Thang Homestay (Đà Lạt)
@@ -484,6 +484,22 @@ export const seedDatabase = async () => {
                 ],
                 isAvailable: true
             },
+            {
+                hotelId: hotelPhuQuoc.id,
+                roomType: "Villa Hồ Bơi Riêng Biển Đảo",
+                maxGuests: 8,
+                pricePerNight: 1450000,
+                amenities: ["Free WiFi", "Pool Access", "Free Breakfast", "Bếp BBQ ngoài trời", "Bồn tắm massage", "Chỗ đậu xe ô tô"],
+                seasonalPricing: [
+                    { name: "Mùa Cao Điểm Biển Đảo", startDate: "2026-12-15", endDate: "2027-02-28", pricePerNight: 1750000 }
+                ],
+                images: [
+                    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800",
+                    "https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=800",
+                    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800"
+                ],
+                isAvailable: true
+            },
 
             // Rooms for Phố Cổ Heritage Homestay (Hà Nội)
             {
@@ -562,7 +578,7 @@ export const seedDatabase = async () => {
         console.log(`✅ INSERT ${createdRooms.length} phòng nghỉ.`);
 
         // ==========================================
-        // 5. SEED BOOKINGS (Đơn đặt phòng đa dạng trạng thái)
+        // 5. SEED BOOKINGS (Đơn đặt phòng đa dạng trạng thái, thanh toán VNPay & trải đều 6 tháng)
         // ==========================================
         const today = new Date();
         const formatDate = (daysOffset) => {
@@ -570,9 +586,14 @@ export const seedDatabase = async () => {
             d.setDate(d.getDate() + daysOffset);
             return d;
         };
+        const monthsAgoDate = (monthsAgo, dayOfMonth = 12) => {
+            return new Date(today.getFullYear(), today.getMonth() - monthsAgo, dayOfMonth, 10, 0, 0);
+        };
 
+        // Note: createdRooms index shifted by +1 after index 9 due to added Villa room at index 10
+        // 0,1,2: Đà Lạt | 3,4,5: Đà Nẵng | 6,7: Sa Pa | 8,9,10: Phú Quốc | 11,12,13: Hà Nội | 14,15: HCM (pending)
         const bookingsData = [
-            // 1. Khách đang ở hiện tại (Active stay) tại Mây Lang Thang
+            // 1. Khách đang ở hiện tại (Active stay - VNPay đã thanh toán) tại Mây Lang Thang
             {
                 userId: "user_guest_01",
                 roomId: createdRooms[0].id,
@@ -582,10 +603,14 @@ export const seedDatabase = async () => {
                 totalPrice: 840000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: formatDate(-2),
+                transactionRef: "HS101VNP2026001",
+                bookingCode: "bk113579",
+                createdAt: formatDate(-2),
             },
-            // 2. Khách sắp tới nhận phòng tuần sau (Upcoming confirmed)
+            // 2. Khách sắp tới nhận phòng tuần sau (Upcoming confirmed - VNPay đã thanh toán)
             {
                 userId: "user_guest_02",
                 roomId: createdRooms[1].id,
@@ -595,10 +620,14 @@ export const seedDatabase = async () => {
                 totalPrice: 1350000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: formatDate(-1),
+                transactionRef: "HS102VNP2026002",
+                bookingCode: "bk224680",
+                createdAt: formatDate(-1),
             },
-            // 3. Đơn chờ duyệt (Pending booking) - để chủ nhà bấm Duyệt/Từ chối
+            // 3. Đơn chờ duyệt (Pending booking - Thanh toán tại Homestay)
             {
                 userId: "user_guest_03",
                 roomId: createdRooms[2].id,
@@ -609,22 +638,47 @@ export const seedDatabase = async () => {
                 guests: 4,
                 status: "pending",
                 paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk335791",
+                createdAt: today,
             },
-            // 4. Lịch sử chuyến đi đã hoàn tất tháng trước (Past stay)
+            // 4. Đơn VNPay chưa hoàn tất thanh toán (để khachhang@homestay.vn test nút "Thanh toán lại VNPay" và Hủy đơn)
+            {
+                userId: "user_guest_01",
+                roomId: createdRooms[1].id,
+                hotelId: hotelDalat.id,
+                checkInDate: formatDate(15),
+                checkOutDate: formatDate(17),
+                totalPrice: 900000,
+                guests: 2,
+                status: "pending",
+                paymentMethod: "VNPay",
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk446802",
+                createdAt: today,
+            },
+            // 5. Lịch sử chuyến đi đã hoàn tất tháng trước (Past stay - Đà Nẵng)
             {
                 userId: "user_guest_01",
                 roomId: createdRooms[3].id,
                 hotelId: hotelDanang.id,
-                checkInDate: formatDate(-20),
-                checkOutDate: formatDate(-17),
+                checkInDate: monthsAgoDate(1, 10),
+                checkOutDate: monthsAgoDate(1, 13),
                 totalPrice: 960000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: monthsAgoDate(1, 8),
+                transactionRef: "HS105VNP2026005",
+                bookingCode: "bk557913",
+                createdAt: monthsAgoDate(1, 8),
             },
-            // 5. Đơn khách đã hủy (Cancelled booking)
+            // 6. Đơn khách đã hủy (Cancelled booking)
             {
                 userId: "user_guest_04",
                 roomId: createdRooms[0].id,
@@ -635,9 +689,13 @@ export const seedDatabase = async () => {
                 guests: 1,
                 status: "cancelled",
                 paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk668024",
+                createdAt: formatDate(-12),
             },
-            // 6. Khách đang ở tại Đà Nẵng
+            // 7. Khách đang ở tại Đà Nẵng
             {
                 userId: "user_guest_02",
                 roomId: createdRooms[4].id,
@@ -648,9 +706,13 @@ export const seedDatabase = async () => {
                 guests: 2,
                 status: "confirmed",
                 paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk779135",
+                createdAt: formatDate(-4),
             },
-            // 7. Đơn sắp tới tại Sa Pa
+            // 8. Đơn sắp tới tại Sa Pa
             {
                 userId: "user_guest_03",
                 roomId: createdRooms[6].id,
@@ -660,10 +722,14 @@ export const seedDatabase = async () => {
                 totalPrice: 870000,
                 guests: 2,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: formatDate(-3),
+                transactionRef: "HS108VNP2026008",
+                bookingCode: "bk880246",
+                createdAt: formatDate(-3),
             },
-            // 8. Đơn chờ duyệt tại Sa Pa
+            // 9. Đơn chờ duyệt tại Sa Pa
             {
                 userId: "user_guest_04",
                 roomId: createdRooms[7].id,
@@ -674,25 +740,33 @@ export const seedDatabase = async () => {
                 guests: 2,
                 status: "pending",
                 paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk991357",
+                createdAt: formatDate(-1),
             },
-            // 9. Lịch sử đã hoàn tất tại Phú Quốc
+            // 10. Lịch sử đã hoàn tất 2 tháng trước tại Phú Quốc (Villa cao cấp)
             {
                 userId: "user_guest_01",
-                roomId: createdRooms[8].id,
+                roomId: createdRooms[10].id,
                 hotelId: hotelPhuQuoc.id,
-                checkInDate: formatDate(-35),
-                checkOutDate: formatDate(-32),
-                totalPrice: 1080000,
-                guests: 2,
+                checkInDate: monthsAgoDate(2, 15),
+                checkOutDate: monthsAgoDate(2, 18),
+                totalPrice: 4350000,
+                guests: 6,
                 status: "confirmed",
-                paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: monthsAgoDate(2, 12),
+                transactionRef: "HS110VNP2026010",
+                bookingCode: "bk102468",
+                createdAt: monthsAgoDate(2, 12),
             },
-            // 10. Đơn sắp tới tại Hà Nội
+            // 11. Đơn sắp tới tại Hà Nội
             {
                 userId: "user_guest_02",
-                roomId: createdRooms[11].id,
+                roomId: createdRooms[12].id,
                 hotelId: hotelHanoi.id,
                 checkInDate: formatDate(5),
                 checkOutDate: formatDate(7),
@@ -700,7 +774,140 @@ export const seedDatabase = async () => {
                 guests: 2,
                 status: "confirmed",
                 paymentMethod: "Pay At Hotel",
-                bookingCode: Math.random().toString(36).substring(2, 10)
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk213579",
+                createdAt: formatDate(-2),
+            },
+            // 12-16: Dữ liệu lịch sử 1 -> 5 tháng trước cho Mây Lang Thang & toàn sàn (hiển thị biểu đồ 6 tháng)
+            {
+                userId: "user_guest_03",
+                roomId: createdRooms[2].id,
+                hotelId: hotelDalat.id,
+                checkInDate: monthsAgoDate(1, 18),
+                checkOutDate: monthsAgoDate(1, 21),
+                totalPrice: 2250000,
+                guests: 4,
+                status: "confirmed",
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: monthsAgoDate(1, 16),
+                transactionRef: "HS112VNP2026012",
+                bookingCode: "bk324680",
+                createdAt: monthsAgoDate(1, 16),
+            },
+            {
+                userId: "user_guest_04",
+                roomId: createdRooms[1].id,
+                hotelId: hotelDalat.id,
+                checkInDate: monthsAgoDate(2, 8),
+                checkOutDate: monthsAgoDate(2, 11),
+                totalPrice: 1350000,
+                guests: 2,
+                status: "confirmed",
+                paymentMethod: "Pay At Hotel",
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk435791",
+                createdAt: monthsAgoDate(2, 5),
+            },
+            {
+                userId: "user_guest_02",
+                roomId: createdRooms[2].id,
+                hotelId: hotelDalat.id,
+                checkInDate: monthsAgoDate(3, 14),
+                checkOutDate: monthsAgoDate(3, 17),
+                totalPrice: 2250000,
+                guests: 5,
+                status: "confirmed",
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: monthsAgoDate(3, 10),
+                transactionRef: "HS114VNP2026014",
+                bookingCode: "bk546802",
+                createdAt: monthsAgoDate(3, 10),
+            },
+            {
+                userId: "user_guest_01",
+                roomId: createdRooms[0].id,
+                hotelId: hotelDalat.id,
+                checkInDate: monthsAgoDate(4, 20),
+                checkOutDate: monthsAgoDate(4, 24),
+                totalPrice: 1120000,
+                guests: 2,
+                status: "confirmed",
+                paymentMethod: "Pay At Hotel",
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk657913",
+                createdAt: monthsAgoDate(4, 15),
+            },
+            {
+                userId: "user_guest_03",
+                roomId: createdRooms[1].id,
+                hotelId: hotelDalat.id,
+                checkInDate: monthsAgoDate(5, 11),
+                checkOutDate: monthsAgoDate(5, 15),
+                totalPrice: 1800000,
+                guests: 3,
+                status: "confirmed",
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: monthsAgoDate(5, 9),
+                transactionRef: "HS116VNP2026016",
+                bookingCode: "bk768024",
+                createdAt: monthsAgoDate(5, 9),
+            },
+            {
+                userId: "user_guest_04",
+                roomId: createdRooms[4].id,
+                hotelId: hotelDanang.id,
+                checkInDate: monthsAgoDate(3, 5),
+                checkOutDate: monthsAgoDate(3, 8),
+                totalPrice: 1650000,
+                guests: 3,
+                status: "confirmed",
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: monthsAgoDate(3, 2),
+                transactionRef: "HS117VNP2026017",
+                bookingCode: "bk879135",
+                createdAt: monthsAgoDate(3, 2),
+            },
+            {
+                userId: "user_guest_02",
+                roomId: createdRooms[7].id,
+                hotelId: hotelSapa.id,
+                checkInDate: monthsAgoDate(4, 12),
+                checkOutDate: monthsAgoDate(4, 15),
+                totalPrice: 1440000,
+                guests: 2,
+                status: "confirmed",
+                paymentMethod: "Pay At Hotel",
+                isPaid: false,
+                paidAt: null,
+                transactionRef: null,
+                bookingCode: "bk980246",
+                createdAt: monthsAgoDate(4, 9),
+            },
+            {
+                userId: "user_guest_01",
+                roomId: createdRooms[12].id,
+                hotelId: hotelHanoi.id,
+                checkInDate: monthsAgoDate(5, 18),
+                checkOutDate: monthsAgoDate(5, 21),
+                totalPrice: 810000,
+                guests: 2,
+                status: "confirmed",
+                paymentMethod: "VNPay",
+                isPaid: true,
+                paidAt: monthsAgoDate(5, 14),
+                transactionRef: "HS119VNP2026019",
+                bookingCode: "bk091357",
+                createdAt: monthsAgoDate(5, 14),
             }
         ];
 
@@ -709,76 +916,103 @@ export const seedDatabase = async () => {
                 ...b,
                 isSendMail: b.status === "confirmed",
                 bookingCode: b.bookingCode || `bk${String(100000 + (idx + 1) * 13579).slice(0, 6)}`,
+                updatedAt: b.createdAt || today,
             }))
         );
         console.log(`✅ INSERT ${createdBookings.length} bookings.`);
 
         // ==========================================
-        // 6. SEED REVIEWS (Đánh giá & phản hồi chất lượng)
+        // 6. SEED REVIEWS (Đánh giá & phản hồi từ Chủ nhà)
         // ==========================================
         const reviewsData = [
             {
                 userId: "user_guest_01",
                 hotelId: hotelDalat.id,
                 roomId: createdRooms[0].id,
+                bookingId: createdBookings[0].id,
                 rating: 5,
-                comment: "Homestay tuyệt vời hơn cả mong đợi! Không gian yên bình, ngắm mây buổi sáng từ phòng ngủ rất thơ mộng. Chủ nhà cực kỳ chu đáo và mến khách."
+                comment: "Homestay tuyệt vời hơn cả mong đợi! Không gian yên bình, ngắm mây buổi sáng từ phòng ngủ rất thơ mộng. Chủ nhà cực kỳ chu đáo và mến khách.",
+                ownerReply: "Cảm ơn anh Khách rất nhiều đã tin tưởng chọn Mây Lang Thang! Chúc anh nhiều sức khỏe và hẹn đón anh quay lại mùa hoa dã quỳ tới nhé.",
+                repliedAt: formatDate(-1),
             },
             {
                 userId: "user_guest_02",
                 hotelId: hotelDalat.id,
                 roomId: createdRooms[1].id,
+                bookingId: createdBookings[1].id,
                 rating: 5,
-                comment: "Phòng VIP có bồn tắm massage view rừng thông cực kỳ thư giãn. Đồ ăn sáng tươi ngon chuẩn vị Đà Lạt, sân khấu acoustic cuối tuần rất chill."
+                comment: "Phòng VIP có bồn tắm massage view rừng thông cực kỳ thư giãn. Đồ ăn sáng tươi ngon chuẩn vị Đà Lạt, sân khấu acoustic cuối tuần rất chill.",
+                ownerReply: "Mây Lang Thang rất vui khi bạn hài lòng với phòng VIP và đêm nhạc acoustic! Cảm ơn những lời khen ấm áp của bạn.",
+                repliedAt: today,
             },
             {
                 userId: "user_guest_03",
                 hotelId: hotelDalat.id,
                 roomId: createdRooms[2].id,
+                bookingId: createdBookings[11].id,
                 rating: 4,
-                comment: "Không gian phòng gia đình rộng rãi, tiện nghi đầy đủ cho nhóm 5 người. Đường vào hơi dốc nhẹ một chút nhưng khung cảnh thiên nhiên hoàn toàn xứng đáng."
+                comment: "Không gian phòng gia đình rộng rãi, tiện nghi đầy đủ cho nhóm 5 người. Đường vào hơi dốc nhẹ một chút nhưng khung cảnh thiên nhiên hoàn toàn xứng đáng.",
+                ownerReply: null,
+                repliedAt: null,
             },
             {
                 userId: "user_guest_01",
                 hotelId: hotelDanang.id,
                 roomId: createdRooms[3].id,
+                bookingId: createdBookings[4].id,
                 rating: 5,
-                comment: "Vị trí sát bờ biển Mỹ Khê cực kỳ thuận tiện, chỉ đi bộ 2 phút là chạm chân đến cát. Hồ bơi riêng sạch sẽ, phòng ốc thơm tho và hiện đại."
+                comment: "Vị trí sát bờ biển Mỹ Khê cực kỳ thuận tiện, chỉ đi bộ 2 phút là chạm chân đến cát. Hồ bơi riêng sạch sẽ, phòng ốc thơm tho và hiện đại.",
+                ownerReply: "Biển Xanh Boutique Villa xin chân thành cảm ơn quý khách! Rất mong được tiếp tục đồng hành trong các chuyến du lịch Đà Nẵng sắp tới.",
+                repliedAt: formatDate(-10),
             },
             {
                 userId: "user_guest_04",
                 hotelId: hotelDanang.id,
                 roomId: createdRooms[4].id,
+                bookingId: createdBookings[16].id,
                 rating: 5,
-                comment: "Villa đẳng cấp, các bạn nhân viên phục vụ cực kỳ chuyên nghiệp. Gia đình mình đã có kỳ nghỉ hè đáng nhớ tại Đà Nẵng."
+                comment: "Villa đẳng cấp, các bạn nhân viên phục vụ cực kỳ chuyên nghiệp. Gia đình mình đã có kỳ nghỉ hè đáng nhớ tại Đà Nẵng.",
+                ownerReply: null,
+                repliedAt: null,
             },
             {
                 userId: "user_guest_02",
                 hotelId: hotelSapa.id,
                 roomId: createdRooms[6].id,
+                bookingId: createdBookings[17].id,
                 rating: 5,
-                comment: "Cảnh nhìn ra thung lũng Mường Hoa đẹp mê hồn, ngỡ như lạc vào chốn bồng lai tiên cảnh. Trải nghiệm tắm lá thuốc Dao đỏ rất sảng khoái!"
+                comment: "Cảnh nhìn ra thung lũng Mường Hoa đẹp mê hồn, ngỡ như lạc vào chốn bồng lai tiên cảnh. Trải nghiệm tắm lá thuốc Dao đỏ rất sảng khoái!",
+                ownerReply: "Cảm ơn chị Minh Anh đã chia sẻ trải nghiệm tuyệt vời tại Eco Palm Sa Pa. Hẹn gặp lại chị vào mùa lúa chín nhé!",
+                repliedAt: formatDate(-5),
             },
             {
-                userId: "user_guest_03",
+                userId: "user_guest_01",
                 hotelId: hotelPhuQuoc.id,
-                roomId: createdRooms[8].id,
+                roomId: createdRooms[10].id,
+                bookingId: createdBookings[9].id,
                 rating: 5,
-                comment: "Bungalow sát biển đúng nghĩa, chiều ngắm hoàng hôn đỏ rực bên ly cocktail là khoảnh khắc tuyệt vời nhất chuyến đi Phú Quốc."
+                comment: "Villa sát biển đúng nghĩa, hồ bơi riêng cực sạch, chiều ngắm hoàng hôn đỏ rực bên ly cocktail là khoảnh khắc tuyệt vời nhất chuyến đi Phú Quốc.",
+                ownerReply: null,
+                repliedAt: null,
             },
             {
                 userId: "user_guest_01",
                 hotelId: hotelHanoi.id,
-                roomId: createdRooms[11].id,
+                roomId: createdRooms[12].id,
+                bookingId: createdBookings[18].id,
                 rating: 5,
-                comment: "Homestay nằm giữa lòng phố cổ Hàng Bè, đi bộ ra Hồ Gươm chỉ vài bước chân. Không gian cổ kính nhưng đầy đủ máy lạnh và tiện nghi hiện đại."
+                comment: "Homestay nằm giữa lòng phố cổ Hàng Bè, đi bộ ra Hồ Gươm chỉ vài bước chân. Không gian cổ kính nhưng đầy đủ máy lạnh và tiện nghi hiện đại.",
+                ownerReply: "Cảm ơn bạn đã yêu thích không gian Hà Nội xưa của Phố Cổ Heritage Homestay!",
+                repliedAt: formatDate(-15),
             },
             {
                 userId: "user_guest_04",
                 hotelId: hotelHanoi.id,
-                roomId: createdRooms[12].id,
+                roomId: createdRooms[13].id,
                 rating: 4,
-                comment: "Phòng ốc bài trí tinh tế, sạch bóng. Buổi sáng bước ra phố là tha hồ thưởng thức phở và cà phê trứng truyền thống."
+                comment: "Phòng ốc bài trí tinh tế, sạch bóng. Buổi sáng bước ra phố là tha hồ thưởng thức phở và cà phê trứng truyền thống.",
+                ownerReply: null,
+                repliedAt: null,
             }
         ];
 

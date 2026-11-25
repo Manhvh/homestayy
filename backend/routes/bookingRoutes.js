@@ -1,6 +1,7 @@
 import express from "express";
 import {
     checkAvailabilityAPI,
+    getRoomBookedDates,
     createBookings,
     getHotelBookings,
     getUserBookings,
@@ -13,6 +14,7 @@ import { protect } from "../middleware/authMiddleware.js";
 const bookingRouter = express.Router();
 
 bookingRouter.post("/check-availability", checkAvailabilityAPI);
+bookingRouter.get("/room/:roomId/booked-dates", getRoomBookedDates);
 bookingRouter.post("/book", protect, createBookings);
 bookingRouter.get("/user", protect, getUserBookings);
 bookingRouter.get("/hotel", protect, getHotelBookings);

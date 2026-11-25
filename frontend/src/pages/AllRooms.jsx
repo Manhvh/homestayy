@@ -95,12 +95,21 @@ const AllRooms = () => {
     amenities: [],
   });
 
-  // Price Range limits: 100.000 VNĐ to under 1.000.000 VNĐ
-  const MIN_PRICE_LIMIT = 100000;
-  const MAX_PRICE_LIMIT = 1000000;
+  // Dynamic Price Range limits calculated from actual rooms list (no hardcoded 1.000.000 VNĐ cap)
+  const MIN_PRICE_LIMIT = 0;
+  const dynamicMaxPrice = useMemo(() => {
+    const highest = (rooms || []).reduce(
+      (max, r) => Math.max(max, Number(r.pricePerNight) || 0),
+      0
+    );
+    if (highest <= 0) return 2000000;
+    return Math.max(1000000, Math.ceil(highest / 100000) * 100000);
+  }, [rooms]);
 
+  // maxPrice === null means no upper limit (show all rooms up to dynamicMaxPrice)
   const [minPrice, setMinPrice] = useState(MIN_PRICE_LIMIT);
-  const [maxPrice, setMaxPrice] = useState(MAX_PRICE_LIMIT);
+  const [maxPrice, setMaxPrice] = useState(null);
+  const effectiveMaxPrice = maxPrice === null ? dynamicMaxPrice : maxPrice;
 
   const [selectedSort, setSelectedSort] = useState('');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
@@ -168,7 +177,8 @@ const AllRooms = () => {
         }
 
         const price = Number(room.pricePerNight) || 0;
-        if (price < minPrice || price > maxPrice) return false;
+        if (price < minPrice) return false;
+        if (maxPrice !== null && price > maxPrice) return false;
 
         if (selectedFilters.amenities.length > 0) {
           const hasAllAmenities = selectedFilters.amenities.every(
@@ -231,7 +241,7 @@ const AllRooms = () => {
     });
     setAddressSearch('');
     setMinPrice(MIN_PRICE_LIMIT);
-    setMaxPrice(MAX_PRICE_LIMIT);
+    setMaxPrice(null);
     setDateFilters({ checkIn: '', checkOut: '' });
     setGuestsFilter('');
     setSelectedSort('');
@@ -324,10 +334,11 @@ const AllRooms = () => {
               Lọc nhanh giá:
             </span>
             {[
-              { label: `Tất cả`, min: MIN_PRICE_LIMIT, max: MAX_PRICE_LIMIT },
-              { label: `100.000 - 300.000 ${currency}`, min: 100000, max: 300000 },
+              { label: `Tất cả`, min: MIN_PRICE_LIMIT, max: null },
+              { label: `≤ 300.000 ${currency}`, min: 0, max: 300000 },
               { label: `300.000 - 500.000 ${currency}`, min: 300000, max: 500000 },
-              { label: `500.000 - 1.000.000 ${currency}`, min: 500000, max: 1000000 }
+              { label: `500.000 - 1.000.000 ${currency}`, min: 500000, max: 1000000 },
+              { label: `Trên 1.000.000 ${currency}`, min: 1000000, max: null },
             ].map((chip, idx) => {
               const isSelected = minPrice === chip.min && maxPrice === chip.max;
               return (
@@ -625,15 +636,17 @@ const AllRooms = () => {
               </div>
             </div>
 
-            {/* Horizontal Price Range Slider (100.000 VNĐ - 1.000.000 VNĐ) */}
+            {/* Dynamic Horizontal Price Range Slider */}
             <div className="pb-5 border-b border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-semibold text-gray-800 text-sm">
                   Mức giá
                 </p>
                 <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
-                  {minPrice === MIN_PRICE_LIMIT && maxPrice >= MAX_PRICE_LIMIT
-                    ? `Tất cả (< 1.000.000 ${currency})`
+                  {minPrice === MIN_PRICE_LIMIT && maxPrice === null
+                    ? `Tất cả mức giá`
+                    : maxPrice === null
+                    ? `≥ ${Number(minPrice).toLocaleString('vi-VN')} ${currency}`
                     : `${Number(minPrice).toLocaleString('vi-VN')} - ${Number(maxPrice).toLocaleString('vi-VN')} ${currency}`}
                 </span>
               </div>
@@ -643,39 +656,42 @@ const AllRooms = () => {
                 <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                   <span>Kéo chọn giá tối đa:</span>
                   <span className="font-bold text-blue-600">
-                    {maxPrice >= MAX_PRICE_LIMIT ? `< 1.000.000 ${currency}` : `≤ ${Number(maxPrice).toLocaleString('vi-VN')} ${currency}`}
+                    {maxPrice === null || effectiveMaxPrice >= dynamicMaxPrice
+                      ? `Tối đa ${Number(dynamicMaxPrice).toLocaleString('vi-VN')} ${currency}`
+                      : `≤ ${Number(effectiveMaxPrice).toLocaleString('vi-VN')} ${currency}`}
                   </span>
                 </div>
                 <input
                   type="range"
                   min={MIN_PRICE_LIMIT}
-                  max={MAX_PRICE_LIMIT}
+                  max={dynamicMaxPrice}
                   step="50000"
-                  value={maxPrice}
+                  value={Math.min(effectiveMaxPrice, dynamicMaxPrice)}
                   onChange={(e) => {
                     const val = Number(e.target.value);
-                    setMaxPrice(val);
+                    setMaxPrice(val >= dynamicMaxPrice ? null : val);
                     if (minPrice > val) setMinPrice(MIN_PRICE_LIMIT);
                   }}
                   className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-blue-600 transition-all duration-150"
                   style={{
-                    background: `linear-gradient(to right, #2563eb ${Math.min(100, Math.max(0, ((maxPrice - MIN_PRICE_LIMIT) / (MAX_PRICE_LIMIT - MIN_PRICE_LIMIT)) * 100))}%, #e5e7eb ${Math.min(100, Math.max(0, ((maxPrice - MIN_PRICE_LIMIT) / (MAX_PRICE_LIMIT - MIN_PRICE_LIMIT)) * 100))}%)`
+                    background: `linear-gradient(to right, #2563eb ${Math.min(100, Math.max(0, ((Math.min(effectiveMaxPrice, dynamicMaxPrice) - MIN_PRICE_LIMIT) / Math.max(1, dynamicMaxPrice - MIN_PRICE_LIMIT)) * 100))}%, #e5e7eb ${Math.min(100, Math.max(0, ((Math.min(effectiveMaxPrice, dynamicMaxPrice) - MIN_PRICE_LIMIT) / Math.max(1, dynamicMaxPrice - MIN_PRICE_LIMIT)) * 100))}%)`
                   }}
                 />
                 <div className="flex justify-between items-center text-[11px] text-gray-400 mt-1.5 font-medium">
-                  <span>100.000 {currency}</span>
-                  <span className="text-gray-500 font-semibold">{Number(maxPrice).toLocaleString('vi-VN')} {currency}</span>
-                  <span>1.000.000 {currency}</span>
+                  <span>0 {currency}</span>
+                  <span className="text-gray-500 font-semibold">{Number(effectiveMaxPrice).toLocaleString('vi-VN')} {currency}</span>
+                  <span>{Number(dynamicMaxPrice).toLocaleString('vi-VN')} {currency}</span>
                 </div>
               </div>
 
               {/* Quick Preset Buttons */}
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {[
-                  { label: "Tất cả", min: MIN_PRICE_LIMIT, max: MAX_PRICE_LIMIT },
+                  { label: "Tất cả", min: MIN_PRICE_LIMIT, max: null },
                   { label: `≤ 300k`, min: MIN_PRICE_LIMIT, max: 300000 },
                   { label: `≤ 500k`, min: MIN_PRICE_LIMIT, max: 500000 },
-                  { label: `< 1tr`, min: MIN_PRICE_LIMIT, max: MAX_PRICE_LIMIT },
+                  { label: `≤ 1tr`, min: MIN_PRICE_LIMIT, max: 1000000 },
+                  { label: `> 1tr`, min: 1000000, max: null },
                 ].map((preset, idx) => {
                   const isSelected = minPrice === preset.min && maxPrice === preset.max;
                   return (

@@ -19,6 +19,13 @@ const AdminCategories = () => {
     const [newDesc, setNewDesc] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    // Edit Modal state
+    const [editingItem, setEditingItem] = useState(null);
+    const [editName, setEditName] = useState('');
+    const [editDesc, setEditDesc] = useState('');
+    const [editIcon, setEditIcon] = useState('');
+    const [updating, setUpdating] = useState(false);
+
     const loadCategories = useCallback(async () => {
         try {
             setLoading(true);
@@ -66,6 +73,61 @@ const AdminCategories = () => {
         }
     };
 
+    const handleOpenEdit = (item) => {
+        setEditingItem(item);
+        setEditName(item.name || '');
+        setEditDesc(item.description || '');
+        setEditIcon(item.icon || '');
+    };
+
+    const handleCloseEdit = () => {
+        if (updating) return;
+        setEditingItem(null);
+        setEditName('');
+        setEditDesc('');
+        setEditIcon('');
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        if (!editingItem || updating) return;
+        if (!editName.trim()) {
+            toast.error("Tên danh mục không được để trống.");
+            return;
+        }
+
+        try {
+            setUpdating(true);
+            const token = await getToken();
+            const itemId = editingItem.id || editingItem._id;
+            const { data } = await axios.put(
+                `/api/categories/${itemId}`,
+                {
+                    name: editName.trim(),
+                    description: editDesc.trim(),
+                    icon: editIcon.trim(),
+                    type: editingItem.type || activeTab,
+                },
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            if (data.success) {
+                toast.success(data.message || "Cập nhật danh mục thành công!");
+                setEditingItem(null);
+                loadCategories();
+                refreshGlobalCategories();
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || error.message);
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const handleDelete = async (id) => {
         if (!window.confirm("Bạn có chắc chắn muốn xóa mục này khỏi danh mục hệ thống?")) return;
 
@@ -83,7 +145,7 @@ const AdminCategories = () => {
                 toast.error(data.message);
             }
         } catch (error) {
-            toast.error(error.message);
+            toast.error(error.response?.data?.message || error.message);
         }
     };
 
@@ -108,14 +170,14 @@ const AdminCategories = () => {
                 align="left"
                 font="outfit"
                 title="Quản Lý Danh Mục"
-                subTitle="Thiết lập danh mục các dịch vụ tiện ích của homestay và danh sách các tỉnh thành / điểm đến du lịch trên toàn quốc."
+                subTitle="Thêm mới, chỉnh sửa và xóa danh mục dịch vụ tiện ích của homestay và danh sách tỉnh thành / điểm đến du lịch trên toàn quốc."
             />
 
             {/* Tabs */}
             <div className="flex border-b border-gray-200">
                 <button
                     onClick={() => setActiveTab('amenity')}
-                    className={`py-3 px-6 text-sm font-bold border-b-2 transition ${
+                    className={`py-3 px-6 text-sm font-bold border-b-2 transition cursor-pointer ${
                         activeTab === 'amenity'
                             ? 'border-purple-600 text-purple-700'
                             : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -125,7 +187,7 @@ const AdminCategories = () => {
                 </button>
                 <button
                     onClick={() => setActiveTab('city')}
-                    className={`py-3 px-6 text-sm font-bold border-b-2 transition ${
+                    className={`py-3 px-6 text-sm font-bold border-b-2 transition cursor-pointer ${
                         activeTab === 'city'
                             ? 'border-purple-600 text-purple-700'
                             : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -163,7 +225,7 @@ const AdminCategories = () => {
                 <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl text-sm transition shadow-sm disabled:opacity-50"
+                    className="w-full sm:w-auto px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl text-sm transition shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                     {submitting ? "Đang thêm..." : "+ Thêm mới"}
                 </button>
@@ -178,18 +240,29 @@ const AdminCategories = () => {
                         {paginatedList.map((item) => {
                             const itemId = item.id || item._id;
                             return (
-                                <div key={itemId} className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-                                    <div>
-                                        <p className="font-bold text-gray-900 text-sm">{item.name}</p>
-                                        <p className="text-xs text-gray-500 line-clamp-1">{item.description || "Không có mô tả"}</p>
+                                <div key={itemId} className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-bold text-gray-900 text-sm truncate">{item.name}</p>
+                                        <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{item.description || "Không có mô tả"}</p>
                                     </div>
-                                    <button
-                                        onClick={() => handleDelete(itemId)}
-                                        title="Xóa danh mục"
-                                        className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition"
-                                    >
-                                        ✕
-                                    </button>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenEdit(item)}
+                                            title="Sửa danh mục"
+                                            className="px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition cursor-pointer"
+                                        >
+                                            Sửa
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDelete(itemId)}
+                                            title="Xóa danh mục"
+                                            className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -201,6 +274,95 @@ const AdminCategories = () => {
                         onPageChange={setCurrentPage}
                     />
                 </>
+            )}
+
+            {/* Edit Category Modal */}
+            {editingItem && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+                    onClick={handleCloseEdit}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-md p-6 relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={handleCloseEdit}
+                            disabled={updating}
+                            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold cursor-pointer"
+                        >
+                            ✕
+                        </button>
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            Chỉnh Sửa Danh Mục
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-5">
+                            Phân loại: <strong>{editingItem.type === 'amenity' ? 'Tiện ích' : 'Khu vực / Tỉnh thành'}</strong>
+                        </p>
+
+                        <form onSubmit={handleUpdate} className="space-y-4">
+                            <div>
+                                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                                    Tên danh mục *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                                    Mô tả ngắn
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    value={editDesc}
+                                    onChange={(e) => setEditDesc(e.target.value)}
+                                    placeholder="Nhập mô tả..."
+                                    className="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                                />
+                            </div>
+
+                            {editingItem.type === 'amenity' && (
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-700 block mb-1">
+                                        Mã biểu tượng (Icon - tùy chọn)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editIcon}
+                                        onChange={(e) => setEditIcon(e.target.value)}
+                                        placeholder="VD: wifi, pool, bbq..."
+                                        className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseEdit}
+                                    disabled={updating}
+                                    className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-semibold hover:bg-gray-50 cursor-pointer"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={updating}
+                                    className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm disabled:opacity-50 cursor-pointer"
+                                >
+                                    {updating ? "Đang lưu..." : "Lưu thay đổi"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );

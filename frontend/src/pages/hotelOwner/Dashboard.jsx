@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Title from "../../components/Title";
 import Pagination from "../../components/Pagination";
+import RevenueChart from "../../components/RevenueChart";
 import { assets } from "../../assets/assets";
 import { useAppContext } from "../../context/AppContext";
+import { downloadCsv } from "../../utils/csvExport";
 
 const PAGE_SIZE = 10;
 
@@ -12,7 +14,10 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     bookings: [],
     totalBookings: 0,
+    confirmedBookings: 0,
     totalRevenue: 0,
+    paidRevenue: 0,
+    monthlyRevenue: [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -30,12 +35,19 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const token = await getToken();
-      const { data } = await axios.get('/api/bookings/hotel', {
-        headers: { Authorization: `Bearer ${token}` }
+      const { data } = await axios.get("/api/bookings/hotel", {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (data.success) {
-        setDashboardData(data.dashboardData);
+        setDashboardData({
+          bookings: data.dashboardData?.bookings || [],
+          totalBookings: data.dashboardData?.totalBookings || 0,
+          confirmedBookings: data.dashboardData?.confirmedBookings || 0,
+          totalRevenue: data.dashboardData?.totalRevenue || 0,
+          paidRevenue: data.dashboardData?.paidRevenue || 0,
+          monthlyRevenue: data.dashboardData?.monthlyRevenue || [],
+        });
       } else {
         toast.error(data.message);
       }
@@ -53,9 +65,13 @@ const Dashboard = () => {
       setIsLoading(true);
       setActionBookingId(bookingId);
       const token = await getToken();
-      const { data } = await axios.put(`/api/bookings/${bookingId}/status`, { status }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.put(
+        `/api/bookings/${bookingId}/status`,
+        { status },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (data.success) {
         toast.success(data.message);
@@ -78,9 +94,13 @@ const Dashboard = () => {
       setIsLoading(true);
       setActionBookingId(bookingId);
       const token = await getToken();
-      const { data } = await axios.post(`/api/bookings/${bookingId}/send-mail`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await axios.post(
+        `/api/bookings/${bookingId}/send-mail`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (data.success) {
         toast.success(data.message);
@@ -102,7 +122,7 @@ const Dashboard = () => {
     }
   }, [user, fetchDashboardData]);
 
-  const pendingCount = dashboardData.bookings.filter(b => b.status === "pending").length;
+  const pendingCount = dashboardData.bookings.filter((b) => b.status === "pending").length;
 
   const hasActiveFilter =
     filterBookingCode.trim() !== "" ||
@@ -153,30 +173,111 @@ const Dashboard = () => {
     return filteredBookings.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredBookings, currentPage]);
 
+  // Export CSV Report for Homestay Owner
+  const handleExportCsv = () => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const headers = [
+      "Mã đơn",
+      "Khách hàng",
+      "Email",
+      "Số điện thoại",
+      "Loại phòng",
+      "Số khách",
+      "Ngày nhận phòng",
+      "Ngày trả phòng",
+      `Tổng tiền (${currency})`,
+      "Trạng thái đơn",
+      "Phương thức thanh toán",
+      "Trạng thái thanh toán",
+      "Mã giao dịch VNPay",
+      "Ngày đặt",
+    ];
+
+    const rows = filteredBookings.map((b) => [
+      `#${b.bookingCode || b.id}`,
+      b.user?.username || "Khách hàng",
+      b.user?.email || "",
+      b.user?.phone || "",
+      b.room?.roomType || "Phòng tiêu chuẩn",
+      b.guests || 1,
+      b.checkInDate ? new Date(b.checkInDate).toLocaleDateString("vi-VN") : "",
+      b.checkOutDate ? new Date(b.checkOutDate).toLocaleDateString("vi-VN") : "",
+      Number(b.totalPrice) || 0,
+      b.status === "confirmed" ? "Đã duyệt" : b.status === "cancelled" ? "Đã hủy" : "Chờ duyệt",
+      b.paymentMethod === "VNPay" ? "Thanh toán trực tuyến VNPay" : "Thanh toán tại Homestay",
+      b.isPaid ? "Đã thanh toán" : "Chưa thanh toán",
+      b.transactionRef || "",
+      b.createdAt ? new Date(b.createdAt).toLocaleString("vi-VN") : "",
+    ]);
+
+    downloadCsv({
+      filename: `bao-cao-homestay-${todayStr}.csv`,
+      headers,
+      rows,
+    });
+    toast.success("Đã xuất báo cáo CSV thành công!");
+  };
+
   return (
-    <div>
-      <Title
-        align="left"
-        font="outfit"
-        title="Bảng Điều Khiển"
-        subTitle="Quản lý toàn bộ danh mục phòng, duyệt đơn đặt phòng từ khách hàng và theo dõi doanh thu theo thời gian thực."
-      />
+    <div className="space-y-8 pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <Title
+          align="left"
+          font="outfit"
+          title="Bảng Điều Khiển"
+          subTitle="Quản lý danh mục phòng, duyệt đơn đặt phòng từ khách hàng và theo dõi doanh thu 6 tháng gần nhất theo thời gian thực."
+        />
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="self-start sm:self-end inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm transition cursor-pointer whitespace-nowrap"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <span>Xuất báo cáo CSV</span>
+        </button>
+      </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-center">
           <img src={assets.totalBookingIcon} alt="total-booking" className="h-10 w-10 mr-4" />
           <div>
             <p className="text-gray-500 text-xs uppercase font-semibold">Tổng số đơn đặt</p>
             <p className="text-2xl font-bold text-gray-900">{dashboardData.totalBookings}</p>
+            <p className="text-[11px] text-blue-700 mt-0.5">
+              {dashboardData.confirmedBookings} đơn đã xác nhận
+            </p>
           </div>
         </div>
 
         <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-center">
           <img src={assets.totalRevenueIcon} alt="total-revenue" className="h-10 w-10 mr-4" />
           <div>
-            <p className="text-gray-500 text-xs uppercase font-semibold">Tổng doanh thu</p>
-            <p className="text-2xl font-bold text-gray-900">{Number(dashboardData.totalRevenue).toLocaleString('vi-VN')} {currency}</p>
+            <p className="text-gray-500 text-xs uppercase font-semibold">Doanh thu (Đã duyệt)</p>
+            <p className="text-xl font-bold text-gray-900">
+              {Number(dashboardData.totalRevenue).toLocaleString("vi-VN")} {currency}
+            </p>
+            <p className="text-[11px] text-green-700 mt-0.5">Chỉ tính đơn đã xác nhận</p>
+          </div>
+        </div>
+
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex items-center">
+          <div className="h-10 w-10 mr-4 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+            VNP
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase font-semibold">Đã thu qua VNPay</p>
+            <p className="text-xl font-bold text-emerald-700">
+              {Number(dashboardData.paidRevenue).toLocaleString("vi-VN")} {currency}
+            </p>
+            <p className="text-[11px] text-emerald-700 mt-0.5">Thanh toán trực tuyến</p>
           </div>
         </div>
 
@@ -187,237 +288,296 @@ const Dashboard = () => {
           <div>
             <p className="text-gray-500 text-xs uppercase font-semibold">Đơn chờ duyệt</p>
             <p className="text-2xl font-bold text-amber-700">{pendingCount}</p>
+            <p className="text-[11px] text-amber-700 mt-0.5">Cần chủ nhà xác nhận</p>
           </div>
         </div>
       </div>
+
+      {/* 6-Month Revenue Chart */}
+      <RevenueChart
+        data={dashboardData.monthlyRevenue}
+        currency={currency}
+        accent="blue"
+        title="Biểu Đồ Doanh Thu Homestay (6 Tháng Gần Nhất)"
+        subtitle="Tổng hợp doanh thu các đơn đã duyệt và tỷ trọng thanh toán trực tuyến VNPay theo từng tháng"
+        onExportCsv={handleExportCsv}
+        exportLabel="Xuất CSV đơn đặt"
+      />
 
       {/* Recent Bookings Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800">Danh sách đơn đặt phòng gần đây</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Hiển thị <strong>{filteredBookings.length}</strong> / {dashboardData.bookings.length} đơn đặt phòng
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {hasActiveFilter && (
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-800">Danh sách đơn đặt phòng gần đây</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Hiển thị <strong>{filteredBookings.length}</strong> / {dashboardData.bookings.length} đơn đặt phòng
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {hasActiveFilter && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-xs text-red-600 hover:text-red-800 font-medium underline cursor-pointer"
+              >
+                Xóa bộ lọc
+              </button>
+            )}
             <button
-              type="button"
-              onClick={handleResetFilters}
-              className="text-xs text-red-600 hover:text-red-800 font-medium underline cursor-pointer"
+              onClick={fetchDashboardData}
+              className="text-xs text-blue-600 hover:underline font-medium cursor-pointer"
             >
-              Xóa bộ lọc
+              Làm mới dữ liệu
             </button>
-          )}
-          <button onClick={fetchDashboardData} className="text-xs text-blue-600 hover:underline font-medium cursor-pointer">
-            Làm mới dữ liệu
-          </button>
-        </div>
-      </div>
-
-      {/* Filter Bar: bookingCode, tên người dùng, SĐT người đăng ký */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
-              Mã đặt phòng (bookingCode)
-            </label>
-            <input
-              type="text"
-              value={filterBookingCode}
-              onChange={(e) => setFilterBookingCode(e.target.value)}
-              placeholder="Nhập mã đơn (VD: bk113579...)"
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
-              Tên người dùng đặt phòng
-            </label>
-            <input
-              type="text"
-              value={filterUsername}
-              onChange={(e) => setFilterUsername(e.target.value)}
-              placeholder="Nhập tên khách hàng..."
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
-              Số điện thoại khách hàng
-            </label>
-            <input
-              type="text"
-              value={filterPhone}
-              onChange={(e) => setFilterPhone(e.target.value)}
-              placeholder="Nhập SĐT (VD: 0912345678...)"
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
-              Trạng thái đơn
-            </label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="pending">Đang chờ duyệt</option>
-              <option value="confirmed">Đã duyệt</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
           </div>
         </div>
-      </div>
 
-      <div className="w-full text-left border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold text-xs uppercase">
-              <tr>
-                <th className="py-3.5 px-4">Mã đơn</th>
-                <th className="py-3.5 px-4">Khách hàng / SĐT</th>
-                <th className="py-3.5 px-4">Loại phòng</th>
-                <th className="py-3.5 px-4">Ngày nhận / trả</th>
-                <th className="py-3.5 px-4 text-center">Tổng tiền</th>
-                <th className="py-3.5 px-4 text-center">Trạng thái</th>
-                <th className="py-3.5 px-4 text-center">Email xác nhận</th>
-                <th className="py-3.5 px-4 text-center">Hành động duyệt</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
+        {/* Filter Bar: bookingCode, tên người dùng, SĐT người đăng ký */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
+                Mã đặt phòng (bookingCode)
+              </label>
+              <input
+                type="text"
+                value={filterBookingCode}
+                onChange={(e) => setFilterBookingCode(e.target.value)}
+                placeholder="Nhập mã đơn (VD: bk113579...)"
+                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
+                Tên người dùng đặt phòng
+              </label>
+              <input
+                type="text"
+                value={filterUsername}
+                onChange={(e) => setFilterUsername(e.target.value)}
+                placeholder="Nhập tên khách hàng..."
+                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
+                Số điện thoại khách hàng
+              </label>
+              <input
+                type="text"
+                value={filterPhone}
+                onChange={(e) => setFilterPhone(e.target.value)}
+                placeholder="Nhập SĐT (VD: 0912345678...)"
+                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-600 uppercase mb-1">
+                Trạng thái đơn
+              </label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pending">Đang chờ duyệt</option>
+                <option value="confirmed">Đã duyệt</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full text-left border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold text-xs uppercase">
                 <tr>
-                  <td colSpan="8" className="py-8 text-center text-gray-500">
-                    Đang tải dữ liệu...
-                  </td>
+                  <th className="py-3.5 px-4">Mã đơn</th>
+                  <th className="py-3.5 px-4">Khách hàng / SĐT</th>
+                  <th className="py-3.5 px-4">Loại phòng</th>
+                  <th className="py-3.5 px-4">Ngày nhận / trả</th>
+                  <th className="py-3.5 px-4 text-center">Tổng tiền & Thanh toán</th>
+                  <th className="py-3.5 px-4 text-center">Trạng thái</th>
+                  <th className="py-3.5 px-4 text-center">Email xác nhận</th>
+                  <th className="py-3.5 px-4 text-center">Hành động duyệt</th>
                 </tr>
-              ) : filteredBookings.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="py-8 text-center text-gray-500">
-                    {hasActiveFilter
-                      ? "Không tìm thấy đơn đặt phòng nào khớp với bộ lọc."
-                      : "Chưa có đơn đặt phòng nào."}
-                  </td>
-                </tr>
-              ) : (
-                paginatedBookings.map((item) => (
-                  <tr key={item.id || item._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <span className="inline-block font-mono text-xs font-bold bg-gray-100 text-gray-800 px-2.5 py-1 rounded-md border border-gray-200">
-                        #{item.bookingCode || item.id || item._id}
-                      </span>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" className="py-8 text-center text-gray-500">
+                      Đang tải dữ liệu...
                     </td>
-
-                    <td className="py-3 px-4">
-                      <p className="font-semibold text-gray-900">{item.user?.username || "Khách hàng"}</p>
-                      <p className="text-xs text-blue-600 font-medium">
-                        SĐT: {item.user?.phone || "Chưa cập nhật"}
-                      </p>
-                      <p className="text-xs text-gray-400">{item.user?.email}</p>
+                  </tr>
+                ) : filteredBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="py-8 text-center text-gray-500">
+                      {hasActiveFilter
+                        ? "Không tìm thấy đơn đặt phòng nào khớp với bộ lọc."
+                        : "Chưa có đơn đặt phòng nào."}
                     </td>
-
-                    <td className="py-3 px-4 text-gray-700">
-                      {item.room?.roomType || "Phòng tiêu chuẩn"}
-                    </td>
-
-                    <td className="py-3 px-4 text-xs text-gray-600">
-                      <div>Từ: <strong>{new Date(item.checkInDate).toLocaleDateString()}</strong></div>
-                      <div>Đến: <strong>{new Date(item.checkOutDate).toLocaleDateString()}</strong></div>
-                    </td>
-
-                    <td className="py-3 px-4 text-center font-bold text-gray-900">
-                      {Number(item.totalPrice).toLocaleString('vi-VN')} {currency}
-                    </td>
-
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block py-1 px-2.5 text-xs font-bold rounded-full ${
-                        item.status === "confirmed" 
-                          ? "bg-green-100 text-green-700" 
-                          : item.status === "cancelled" 
-                            ? "bg-red-100 text-red-700" 
-                            : "bg-amber-100 text-amber-700"
-                      }`}>
-                        {item.status === "confirmed" ? "Đã duyệt" : item.status === "cancelled" ? "Đã hủy" : "Đang chờ duyệt"}
-                      </span>
-                    </td>
-
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className={`inline-block py-0.5 px-2 text-[11px] font-semibold rounded-full ${
-                          item.isSendMail
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}>
-                          {item.isSendMail ? "Đã gửi mail" : "Chưa gửi mail"}
+                  </tr>
+                ) : (
+                  paginatedBookings.map((item) => (
+                    <tr key={item.id || item._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-4">
+                        <span className="inline-block font-mono text-xs font-bold bg-gray-100 text-gray-800 px-2.5 py-1 rounded-md border border-gray-200">
+                          #{item.bookingCode || item.id || item._id}
                         </span>
-                        {item.status !== "cancelled" && (
-                          <button
-                            onClick={() => handleSendMail(item.id || item._id)}
-                            disabled={isLoading}
-                            className="text-[11px] text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium underline cursor-pointer"
-                          >
-                            {isLoading && actionBookingId === (item.id || item._id)
-                              ? "Đang gửi..."
-                              : item.isSendMail
-                              ? "Gửi lại"
-                              : "Gửi mail"}
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="py-3 px-4 text-center">
-                      {item.status === "pending" ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleUpdateStatus(item.id || item._id, "confirmed")}
-                            disabled={isLoading}
-                            className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer"
+                      <td className="py-3 px-4">
+                        <p className="font-semibold text-gray-900">
+                          {item.user?.username || "Khách hàng"}
+                        </p>
+                        <p className="text-xs text-blue-600 font-medium">
+                          SĐT: {item.user?.phone || "Chưa cập nhật"}
+                        </p>
+                        <p className="text-xs text-gray-400">{item.user?.email}</p>
+                      </td>
+
+                      <td className="py-3 px-4 text-gray-700">
+                        {item.room?.roomType || "Phòng tiêu chuẩn"}
+                      </td>
+
+                      <td className="py-3 px-4 text-xs text-gray-600">
+                        <div>
+                          Từ: <strong>{new Date(item.checkInDate).toLocaleDateString("vi-VN")}</strong>
+                        </div>
+                        <div>
+                          Đến: <strong>{new Date(item.checkOutDate).toLocaleDateString("vi-VN")}</strong>
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        <p className="font-bold text-gray-900">
+                          {Number(item.totalPrice).toLocaleString("vi-VN")} {currency}
+                        </p>
+                        <div className="flex flex-col items-center gap-0.5 mt-1">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.isPaid
+                                ? "bg-emerald-100 text-emerald-700"
+                                : item.paymentMethod === "VNPay"
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
                           >
-                            {isLoading && actionBookingId === (item.id || item._id) ? "Đang xử lý..." : "Duyệt"}
-                          </button>
+                            {item.isPaid
+                              ? "✓ Đã thanh toán VNPay"
+                              : item.paymentMethod === "VNPay"
+                              ? "VNPay • Chưa thanh toán"
+                              : "Thanh toán tại Homestay"}
+                          </span>
+                          {item.transactionRef && (
+                            <span className="text-[10px] font-mono text-gray-400">
+                              GD: {item.transactionRef}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={`inline-block py-1 px-2.5 text-xs font-bold rounded-full ${
+                            item.status === "confirmed"
+                              ? "bg-green-100 text-green-700"
+                              : item.status === "cancelled"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {item.status === "confirmed"
+                            ? "Đã duyệt"
+                            : item.status === "cancelled"
+                            ? "Đã hủy"
+                            : "Đang chờ duyệt"}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span
+                            className={`inline-block py-0.5 px-2 text-[11px] font-semibold rounded-full ${
+                              item.isSendMail
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {item.isSendMail ? "Đã gửi mail" : "Chưa gửi mail"}
+                          </span>
+                          {item.status !== "cancelled" && (
+                            <button
+                              onClick={() => handleSendMail(item.id || item._id)}
+                              disabled={isLoading}
+                              className="text-[11px] text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium underline cursor-pointer"
+                            >
+                              {isLoading && actionBookingId === (item.id || item._id)
+                                ? "Đang gửi..."
+                                : item.isSendMail
+                                ? "Gửi lại"
+                                : "Gửi mail"}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        {item.status === "pending" ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleUpdateStatus(item.id || item._id, "confirmed")}
+                              disabled={isLoading}
+                              className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer"
+                            >
+                              {isLoading && actionBookingId === (item.id || item._id)
+                                ? "Đang xử lý..."
+                                : "Duyệt"}
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(item.id || item._id, "cancelled")}
+                              disabled={isLoading}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer"
+                            >
+                              Từ chối
+                            </button>
+                          </div>
+                        ) : item.status === "confirmed" ? (
                           <button
                             onClick={() => handleUpdateStatus(item.id || item._id, "cancelled")}
                             disabled={isLoading}
-                            className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer"
+                            className="px-2.5 py-1 border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs transition cursor-pointer"
                           >
-                            Từ chối
+                            {isLoading && actionBookingId === (item.id || item._id)
+                              ? "Đang xử lý..."
+                              : "Hủy đơn"}
                           </button>
-                        </div>
-                      ) : item.status === "confirmed" ? (
-                        <button
-                          onClick={() => handleUpdateStatus(item.id || item._id, "cancelled")}
-                          disabled={isLoading}
-                          className="px-2.5 py-1 border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs transition cursor-pointer"
-                        >
-                          {isLoading && actionBookingId === (item.id || item._id) ? "Đang xử lý..." : "Hủy đơn"}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-400">Đã đóng</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {!loading && filteredBookings.length > 0 && (
-          <div className="px-4 pb-4">
-            <Pagination
-              currentPage={currentPage}
-              totalItems={filteredBookings.length}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
-            />
+                        ) : (
+                          <span className="text-xs text-gray-400">Đã đóng</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+          {!loading && filteredBookings.length > 0 && (
+            <div className="px-4 pb-4">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredBookings.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

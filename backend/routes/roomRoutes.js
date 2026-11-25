@@ -1,5 +1,5 @@
 import express from "express";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, optionalProtect } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
 import {
     createRoom,
@@ -15,7 +15,7 @@ const roomRouter = express.Router();
 
 roomRouter.get("/", getRooms);
 roomRouter.get("/owner", protect, getOwnerRooms);
-roomRouter.get("/:id", getRoomById);
+roomRouter.get("/:id", optionalProtect, getRoomById);
 roomRouter.post("/", protect, upload.array("images", 4), createRoom);
 roomRouter.put("/:id", protect, upload.array("images", 4), updateRoom);
 roomRouter.delete("/:id", protect, deleteRoom);

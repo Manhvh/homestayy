@@ -23,8 +23,24 @@ const parseAmenities = (rawAmenities) => {
   return [];
 };
 
+// Safely parse seasonalPricing list from array or JSON string
+const parseSeasonalPricing = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 const ListRoom = () => {
   const [rooms, setRooms] = useState([]);
+  const [hotelInfo, setHotelInfo] = useState(undefined); // undefined=loading, null=no hotel, object=hotel
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'active' | 'inactive'
@@ -62,12 +78,21 @@ const ListRoom = () => {
     maxGuests: 2,
     isAvailable: true,
     amenities: [],
+    seasonalPricing: [],
   });
+  const [editShowSeasonSection, setEditShowSeasonSection] = useState(false);
+  const [editSeasonForm, setEditSeasonForm] = useState({
+    name: '',
+    startDate: '',
+    endDate: '',
+    pricePerNight: '',
+  });
+  const [editingSeasonIdx, setEditingSeasonIdx] = useState(null);
   const [customAmenity, setCustomAmenity] = useState('');
   const [newImages, setNewImages] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  const { axios, getToken, user, currency, amenities: dynamicAmenities } = useAppContext();
+  const { axios, getToken, user, currency, amenities: dynamicAmenities, navigate } = useAppContext();
 
   // Base list of amenities
   const defaultAmenitiesList = useMemo(() => {
@@ -102,6 +127,7 @@ const ListRoom = () => {
       });
       if (data.success) {
         setRooms(data.rooms || []);
+        setHotelInfo(data.hotel !== undefined ? data.hotel : (data.rooms?.[0]?.hotel || null));
       } else {
         toast.error(data.message || 'Không thể tải danh sách phòng');
       }
@@ -172,6 +198,11 @@ const ListRoom = () => {
 
   // Open Add Room Modal
   const handleOpenAdd = () => {
+    if (!hotelInfo) {
+      toast.error('Bạn cần khởi tạo hồ sơ Homestay trước khi thêm phòng.');
+      navigate('/owner-dashboard/manage-hotel');
+      return;
+    }
     setAddInputs({
       roomType: '',
       pricePerNight: '',
@@ -290,6 +321,7 @@ const ListRoom = () => {
   // Open Edit Room Modal
   const handleOpenEdit = (room) => {
     const parsed = parseAmenities(room.amenities);
+    const parsedSeasons = parseSeasonalPricing(room.seasonalPricing);
     setEditingRoom(room);
     setEditForm({
       roomType: room.roomType || '',
@@ -297,9 +329,87 @@ const ListRoom = () => {
       maxGuests: room.maxGuests || 2,
       isAvailable: Boolean(room.isAvailable),
       amenities: parsed,
+      seasonalPricing: parsedSeasons,
     });
+    setEditShowSeasonSection(parsedSeasons.length > 0);
+    setEditSeasonForm({ name: '', startDate: '', endDate: '', pricePerNight: '' });
+    setEditingSeasonIdx(null);
     setCustomAmenity('');
     setNewImages([]);
+  };
+
+  // Add or update a seasonal pricing entry inside Edit Modal
+  const handleSaveEditSeason = () => {
+    if (
+      !editSeasonForm.name.trim() ||
+      !editSeasonForm.startDate ||
+      !editSeasonForm.endDate ||
+      !editSeasonForm.pricePerNight
+    ) {
+      toast.error('Vui lòng điền đủ tên mùa/đợt, ngày bắt đầu, ngày kết thúc và giá!');
+      return;
+    }
+    if (new Date(editSeasonForm.startDate) >= new Date(editSeasonForm.endDate)) {
+      toast.error('Ngày bắt đầu phải trước ngày kết thúc!');
+      return;
+    }
+    if (Number(editSeasonForm.pricePerNight) <= 0) {
+      toast.error('Giá theo mùa phải lớn hơn 0!');
+      return;
+    }
+
+    const entry = {
+      name: editSeasonForm.name.trim(),
+      startDate: editSeasonForm.startDate,
+      endDate: editSeasonForm.endDate,
+      pricePerNight: Number(editSeasonForm.pricePerNight),
+    };
+
+    setEditForm((prev) => {
+      const list = Array.isArray(prev.seasonalPricing) ? [...prev.seasonalPricing] : [];
+      if (editingSeasonIdx !== null && editingSeasonIdx >= 0 && editingSeasonIdx < list.length) {
+        list[editingSeasonIdx] = entry;
+      } else {
+        list.push(entry);
+      }
+      return { ...prev, seasonalPricing: list };
+    });
+
+    toast.success(
+      editingSeasonIdx !== null ? 'Đã cập nhật đợt giá theo mùa!' : 'Đã thêm khoảng giá theo mùa!'
+    );
+    setEditSeasonForm({ name: '', startDate: '', endDate: '', pricePerNight: '' });
+    setEditingSeasonIdx(null);
+  };
+
+  const handleStartEditSeason = (idx) => {
+    const item = editForm.seasonalPricing?.[idx];
+    if (!item) return;
+    setEditSeasonForm({
+      name: item.name || '',
+      startDate: item.startDate || '',
+      endDate: item.endDate || '',
+      pricePerNight: item.pricePerNight ?? '',
+    });
+    setEditingSeasonIdx(idx);
+    setEditShowSeasonSection(true);
+  };
+
+  const handleCancelEditSeason = () => {
+    setEditSeasonForm({ name: '', startDate: '', endDate: '', pricePerNight: '' });
+    setEditingSeasonIdx(null);
+  };
+
+  const handleRemoveEditSeason = (idx) => {
+    setEditForm((prev) => ({
+      ...prev,
+      seasonalPricing: (prev.seasonalPricing || []).filter((_, i) => i !== idx),
+    }));
+    if (editingSeasonIdx === idx) {
+      handleCancelEditSeason();
+    } else if (editingSeasonIdx !== null && editingSeasonIdx > idx) {
+      setEditingSeasonIdx(editingSeasonIdx - 1);
+    }
   };
 
   // Toggle amenity selection in Edit Modal
@@ -369,6 +479,7 @@ const ListRoom = () => {
       formData.append('maxGuests', editForm.maxGuests);
       formData.append('isAvailable', editForm.isAvailable);
       formData.append('amenities', JSON.stringify(editForm.amenities));
+      formData.append('seasonalPricing', JSON.stringify(editForm.seasonalPricing || []));
 
       if (newImages.length > 0) {
         newImages.forEach((file) => {
@@ -480,6 +591,52 @@ const ListRoom = () => {
           </button>
         </div>
       </div>
+
+      {/* Onboarding Guide if owner has not created a Homestay yet */}
+      {!loading && hotelInfo === null && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-amber-900">
+              Bạn chưa có hồ sơ Homestay nào!
+            </h3>
+            <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
+              Để đăng tải phòng và đón khách lưu trú, trước tiên bạn cần khởi tạo thông tin Homestay (tên, địa chỉ, số điện thoại, thành phố và ảnh đại diện).
+            </p>
+          </div>
+          <Link
+            to="/owner-dashboard/manage-hotel"
+            className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap"
+          >
+            Tạo hồ sơ Homestay ngay →
+          </Link>
+        </div>
+      )}
+
+      {/* Status Notice if Homestay is Pending / Rejected */}
+      {!loading && hotelInfo && hotelInfo.status !== 'approved' && (
+        <div
+          className={`rounded-2xl p-4 border text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            hotelInfo.status === 'pending'
+              ? 'bg-blue-50 border-blue-200 text-blue-900'
+              : 'bg-red-50 border-red-200 text-red-900'
+          }`}
+        >
+          <div>
+            <strong>
+              {hotelInfo.status === 'pending'
+                ? 'Homestay đang chờ Quản trị viên phê duyệt:'
+                : 'Homestay hiện đang bị từ chối phê duyệt:'}
+            </strong>{' '}
+            Bạn vẫn có thể tạo và chỉnh sửa danh sách phòng trước, nhưng phòng sẽ chỉ hiển thị công khai và mở đặt phòng sau khi Homestay được duyệt.
+          </div>
+          <Link
+            to="/owner-dashboard/manage-hotel"
+            className="text-xs font-semibold underline whitespace-nowrap"
+          >
+            Xem hồ sơ Homestay
+          </Link>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -701,6 +858,11 @@ const ListRoom = () => {
                           {Number(item.pricePerNight).toLocaleString('vi-VN')} {currency}
                         </p>
                         <span className="text-[11px] text-gray-400 whitespace-nowrap">/ đêm</span>
+                        {parseSeasonalPricing(item.seasonalPricing).length > 0 && (
+                          <p className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 inline-block mt-1">
+                            {parseSeasonalPricing(item.seasonalPricing).length} đợt giá mùa
+                          </p>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
@@ -818,6 +980,15 @@ const ListRoom = () => {
         customAmenity={customAmenity}
         setCustomAmenity={setCustomAmenity}
         handleAddCustomAmenity={handleAddCustomAmenity}
+        editShowSeasonSection={editShowSeasonSection}
+        setEditShowSeasonSection={setEditShowSeasonSection}
+        editSeasonForm={editSeasonForm}
+        setEditSeasonForm={setEditSeasonForm}
+        editingSeasonIdx={editingSeasonIdx}
+        handleSaveEditSeason={handleSaveEditSeason}
+        handleStartEditSeason={handleStartEditSeason}
+        handleCancelEditSeason={handleCancelEditSeason}
+        handleRemoveEditSeason={handleRemoveEditSeason}
         newImages={newImages}
         handleImageChange={handleImageChange}
       />

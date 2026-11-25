@@ -65,6 +65,12 @@ export const sendPasswordResetEmail = async ({ email, username, code }) => {
 
 export const sendBookingCreatedEmail = async ({ user, booking, hotel, totalPrice }) => {
     const currency = process.env.CURRENCY || 'VNĐ';
+    const paymentLabel =
+        booking.paymentMethod === 'VNPay'
+            ? booking.isPaid
+                ? 'Thanh toán trực tuyến VNPay (Đã thanh toán)'
+                : 'Thanh toán trực tuyến VNPay (Chờ thanh toán)'
+            : 'Trực tiếp tại Homestay khi nhận phòng';
     const html = `
         <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 30px; color: #333;">
             <div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 25px; border-radius: 8px;">
@@ -75,10 +81,10 @@ export const sendBookingCreatedEmail = async ({ user, booking, hotel, totalPrice
                     <tr><td style="padding: 6px 0;"><strong>Mã đặt phòng:</strong></td><td>#${booking.bookingCode}</td></tr>
                     <tr><td style="padding: 6px 0;"><strong>Homestay:</strong></td><td>${hotel.name}</td></tr>
                     <tr><td style="padding: 6px 0;"><strong>Địa chỉ:</strong></td><td>${hotel.address}</td></tr>
-                    <tr><td style="padding: 6px 0;"><strong>Nhận phòng:</strong></td><td>${new Date(booking.checkInDate).toLocaleDateString()}</td></tr>
-                    <tr><td style="padding: 6px 0;"><strong>Trả phòng:</strong></td><td>${new Date(booking.checkOutDate).toLocaleDateString()}</td></tr>
+                    <tr><td style="padding: 6px 0;"><strong>Nhận phòng:</strong></td><td>${new Date(booking.checkInDate).toLocaleDateString('vi-VN')}</td></tr>
+                    <tr><td style="padding: 6px 0;"><strong>Trả phòng:</strong></td><td>${new Date(booking.checkOutDate).toLocaleDateString('vi-VN')}</td></tr>
                     <tr><td style="padding: 6px 0;"><strong>Tổng tiền:</strong></td><td>${Number(totalPrice).toLocaleString('vi-VN')} ${currency}</td></tr>
-                    <tr><td style="padding: 6px 0;"><strong>Thanh toán:</strong></td><td>Trực tiếp tại Homestay khi nhận phòng</td></tr>
+                    <tr><td style="padding: 6px 0;"><strong>Thanh toán:</strong></td><td>${paymentLabel}</td></tr>
                 </table>
                 <p style="margin-top: 20px;">Chúc bạn có một kỳ nghỉ thật tuyệt vời!</p>
             </div>
@@ -91,6 +97,35 @@ export const sendBookingCreatedEmail = async ({ user, booking, hotel, totalPrice
             html,
         },
         'Booking created email'
+    );
+};
+
+export const sendPaymentSuccessEmail = async ({ user, booking, hotel }) => {
+    const currency = process.env.CURRENCY || 'VNĐ';
+    const codeDisplay = booking.bookingCode || booking.id;
+    const html = `
+        <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 30px; color: #333;">
+            <div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 25px; border-radius: 8px; border: 1px solid #d1fae5;">
+                <h2 style="color: #059669;">Thanh toán VNPay thành công!</h2>
+                <p>Xin chào <strong>${user?.username || 'Quý khách'}</strong>,</p>
+                <p>Chúng tôi đã nhận được khoản thanh toán trực tuyến qua <strong>VNPay</strong> cho đơn đặt phòng <strong>#${codeDisplay}</strong>:</p>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <tr><td style="padding: 6px 0;"><strong>Homestay:</strong></td><td>${hotel?.name || 'Homestay'}</td></tr>
+                    <tr><td style="padding: 6px 0;"><strong>Mã giao dịch:</strong></td><td>${booking.transactionRef || 'N/A'}</td></tr>
+                    <tr><td style="padding: 6px 0;"><strong>Số tiền đã thanh toán:</strong></td><td><strong>${Number(booking.totalPrice).toLocaleString('vi-VN')} ${currency}</strong></td></tr>
+                    <tr><td style="padding: 6px 0;"><strong>Trạng thái đơn:</strong></td><td style="color: #059669;"><strong>Đã xác nhận & Đã thanh toán</strong></td></tr>
+                </table>
+                <p style="margin-top: 20px;">Chúc bạn có một kỳ nghỉ thật trọn vẹn cùng HomeStay!</p>
+            </div>
+        </div>
+    `;
+    return safeSendMail(
+        {
+            to: user?.email,
+            subject: `HomeStay - Thanh toán VNPay thành công đơn #${codeDisplay}`,
+            html,
+        },
+        'Payment success email'
     );
 };
 

@@ -395,6 +395,15 @@ export const EditRoomModal = ({
   customAmenity,
   setCustomAmenity,
   handleAddCustomAmenity,
+  editShowSeasonSection,
+  setEditShowSeasonSection,
+  editSeasonForm,
+  setEditSeasonForm,
+  editingSeasonIdx,
+  handleSaveEditSeason,
+  handleStartEditSeason,
+  handleCancelEditSeason,
+  handleRemoveEditSeason,
   newImages,
   handleImageChange,
 }) => {
@@ -585,6 +594,138 @@ export const EditRoomModal = ({
                 + Thêm tiện nghi
               </button>
             </div>
+          </div>
+
+          {/* Bảng giá theo mùa / dịp lễ */}
+          <div className="pt-2 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setEditShowSeasonSection(!editShowSeasonSection)}
+              className="flex items-center justify-between w-full text-left py-2 text-xs font-semibold text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
+            >
+              <span className="uppercase tracking-wider">
+                Bảng giá theo mùa / dịp lễ ({(editForm.seasonalPricing || []).length} đợt)
+              </span>
+              <span className="text-gray-400 font-normal">
+                {editShowSeasonSection ? '▲ Ẩn bớt' : '▼ Mở rộng / Chỉnh sửa'}
+              </span>
+            </button>
+
+            {editShowSeasonSection && (
+              <div className="mt-2 p-4 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3">
+                <p className="text-xs text-gray-600">
+                  Thêm mới, chỉnh sửa hoặc xóa các đợt giá cao điểm, lễ Tết. Khách đặt trong khoảng ngày này sẽ tự động áp dụng mức giá mùa.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Tên đợt (VD: Lễ 30/4)"
+                    value={editSeasonForm.name}
+                    onChange={(e) =>
+                      setEditSeasonForm((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    className="border border-gray-300 rounded-lg p-2 text-xs bg-white"
+                  />
+                  <input
+                    type="date"
+                    value={editSeasonForm.startDate}
+                    onChange={(e) =>
+                      setEditSeasonForm((prev) => ({ ...prev, startDate: e.target.value }))
+                    }
+                    className="border border-gray-300 rounded-lg p-2 text-xs bg-white"
+                  />
+                  <input
+                    type="date"
+                    value={editSeasonForm.endDate}
+                    min={editSeasonForm.startDate}
+                    onChange={(e) =>
+                      setEditSeasonForm((prev) => ({ ...prev, endDate: e.target.value }))
+                    }
+                    className="border border-gray-300 rounded-lg p-2 text-xs bg-white"
+                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="number"
+                      min="10000"
+                      step="10000"
+                      placeholder={`Giá (${currency})`}
+                      value={editSeasonForm.pricePerNight}
+                      onChange={(e) =>
+                        setEditSeasonForm((prev) => ({
+                          ...prev,
+                          pricePerNight: e.target.value,
+                        }))
+                      }
+                      className="border border-gray-300 rounded-lg p-2 text-xs bg-white w-full"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveEditSeason}
+                      className="px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs whitespace-nowrap cursor-pointer"
+                    >
+                      {editingSeasonIdx !== null ? 'Lưu' : '+ Thêm'}
+                    </button>
+                    {editingSeasonIdx !== null && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditSeason}
+                        className="px-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg text-xs cursor-pointer"
+                        title="Hủy sửa đợt giá này"
+                      >
+                        Hủy
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {Array.isArray(editForm.seasonalPricing) && editForm.seasonalPricing.length > 0 ? (
+                  <div className="space-y-1.5 pt-2 border-t border-amber-200">
+                    {editForm.seasonalPricing.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border text-xs ${
+                          editingSeasonIdx === idx
+                            ? 'border-blue-500 ring-1 ring-blue-300 bg-blue-50/40'
+                            : 'border-amber-200'
+                        }`}
+                      >
+                        <div>
+                          <strong className="text-gray-900">{item.name}</strong>:{' '}
+                          <span className="text-gray-600">
+                            {item.startDate} đến {item.endDate}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-bold text-amber-700">
+                            {Number(item.pricePerNight).toLocaleString('vi-VN')} {currency} / đêm
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditSeason(idx)}
+                            className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveEditSeason(idx)}
+                            className="text-red-500 hover:text-red-700 font-bold cursor-pointer"
+                            title="Xóa đợt giá này"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-500 italic">
+                    Chưa có đợt giá theo mùa nào. Bạn có thể thêm ở phía trên.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Ảnh phòng hiện tại & Tải ảnh mới */}

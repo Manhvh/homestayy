@@ -5,6 +5,7 @@ import {
     sendBookingConfirmedEmail,
     sendBookingDetailsEmail,
 } from "../utils/mailService.js";
+import { parseLocalDateOnly, formatDateYMD, buildLast6MonthsRevenue } from "../utils/statsUtils.js";
 
 // Function to check availability of the room
 const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
@@ -15,8 +16,10 @@ const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
             return false;
         }
 
-        const roomDoc = await Room.findByPk(room);
-        if (!roomDoc || !roomDoc.isAvailable) {
+        const roomDoc = await Room.findByPk(room, {
+            include: [{ model: Hotel, as: "hotel" }],
+        });
+        if (!roomDoc || !roomDoc.isAvailable || !roomDoc.hotel || roomDoc.hotel.status !== "approved") {
             return false;
         }
 
@@ -33,6 +36,39 @@ const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
     } catch (error) {
         console.error("Availability check failed:", error.message);
         throw new Error("Không thể kiểm tra trạng thái phòng trống.");
+    }
+};
+
+// API to get booked date ranges for a specific room (upcoming & active non-cancelled bookings)
+export const getRoomBookedDates = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        if (!roomId) {
+            return res.status(400).json({ success: false, message: "Thiếu mã phòng." });
+        }
+
+        const today = parseLocalDateOnly(new Date());
+
+        const bookings = await Booking.findAll({
+            where: {
+                roomId,
+                status: { [Op.ne]: "cancelled" },
+                checkOutDate: { [Op.gte]: today },
+            },
+            attributes: ["id", "checkInDate", "checkOutDate", "status"],
+            order: [["checkInDate", "ASC"]],
+        });
+
+        const bookedDates = bookings.map((b) => ({
+            checkInDate: formatDateYMD(b.checkInDate),
+            checkOutDate: formatDateYMD(b.checkOutDate),
+            status: b.status,
+        }));
+
+        res.json({ success: true, bookedDates });
+    } catch (error) {
+        console.error("Get room booked dates error:", error);
+        res.status(500).json({ success: false, message: "Không thể tải danh sách ngày đã đặt." });
     }
 };
 
@@ -63,12 +99,13 @@ export const createBookings = async (req, res) => {
         return res.status(400).json({ success: false, message: "Định dạng ngày nhận/trả phòng không hợp lệ." });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const checkInDay = new Date(checkIn);
-    checkInDay.setHours(0, 0, 0, 0);
-    const checkOutDay = new Date(checkOut);
-    checkOutDay.setHours(0, 0, 0, 0);
+    const today = parseLocalDateOnly(new Date());
+    const checkInDay = parseLocalDateOnly(checkInDate);
+    const checkOutDay = parseLocalDateOnly(checkOutDate);
+
+    if (!checkInDay || !checkOutDay) {
+        return res.status(400).json({ success: false, message: "Định dạng ngày nhận/trả phòng không hợp lệ." });
+    }
 
     if (checkInDay < today) {
         return res.status(400).json({ success: false, message: "Ngày nhận phòng không được nằm trong quá khứ." });
@@ -107,9 +144,9 @@ export const createBookings = async (req, res) => {
         }
 
         const hotelData = await Hotel.findByPk(roomData.hotelId, { transaction: t });
-        if (!hotelData || hotelData.status === "rejected") {
+        if (!hotelData || hotelData.status !== "approved") {
             await t.rollback();
-            return res.status(400).json({ success: false, message: "Homestay này hiện không hoạt động." });
+            return res.status(400).json({ success: false, message: "Homestay này hiện chưa được phê duyệt hoặc không hoạt động." });
         }
 
         const maxCapacity = roomData.maxGuests || 2;
@@ -160,6 +197,7 @@ export const createBookings = async (req, res) => {
         }
 
         const bookingCode = Math.random().toString(36).substring(2, 10);
+        const normalizedPaymentMethod = paymentMethod === "VNPay" ? "VNPay" : "Pay At Hotel";
 
         const booking = await Booking.create({
             userId,
@@ -170,7 +208,10 @@ export const createBookings = async (req, res) => {
             checkOutDate,
             totalPrice,
             status: "pending",
-            paymentMethod: paymentMethod || "Pay At Hotel",
+            paymentMethod: normalizedPaymentMethod,
+            isPaid: false,
+            paidAt: null,
+            transactionRef: null,
             isSendMail: false,
             bookingCode,
         }, { transaction: t });
@@ -246,7 +287,17 @@ export const getHotelBookings = async (req, res) => {
         const hotel = await Hotel.findOne({ where: { ownerId: req.user.id } });
 
         if (!hotel) {
-            return res.json({ success: true, dashboardData: { totalBookings: 0, totalRevenue: 0, bookings: [] } });
+            return res.json({
+                success: true,
+                dashboardData: {
+                    totalBookings: 0,
+                    confirmedBookings: 0,
+                    totalRevenue: 0,
+                    paidRevenue: 0,
+                    monthlyRevenue: buildLast6MonthsRevenue([]),
+                    bookings: [],
+                },
+            });
         }
 
         const bookings = await Booking.findAll({
@@ -260,11 +311,28 @@ export const getHotelBookings = async (req, res) => {
         });
 
         const totalBookings = bookings.length;
-        const totalRevenue = bookings
-            .filter(b => b.status !== "cancelled")
-            .reduce((acc, booking) => acc + booking.totalPrice, 0);
+        const confirmedBookingsList = bookings.filter((b) => b.status === "confirmed");
+        const confirmedBookings = confirmedBookingsList.length;
+        const totalRevenue = confirmedBookingsList.reduce(
+            (acc, booking) => acc + (Number(booking.totalPrice) || 0),
+            0
+        );
+        const paidRevenue = confirmedBookingsList
+            .filter((b) => b.isPaid)
+            .reduce((acc, booking) => acc + (Number(booking.totalPrice) || 0), 0);
+        const monthlyRevenue = buildLast6MonthsRevenue(bookings);
 
-        res.json({ success: true, dashboardData: { totalBookings, totalRevenue, bookings } });
+        res.json({
+            success: true,
+            dashboardData: {
+                totalBookings,
+                confirmedBookings,
+                totalRevenue,
+                paidRevenue,
+                monthlyRevenue,
+                bookings,
+            },
+        });
     } catch (error) {
         console.error("Get hotel bookings error:", error);
         res.status(500).json({ success: false, message: "Không thể tải danh sách đơn đặt phòng của homestay." });
@@ -368,6 +436,15 @@ export const cancelUserBooking = async (req, res) => {
 
         if (booking.status === "cancelled") {
             return res.status(400).json({ success: false, message: "Đơn này đã được hủy trước đó." });
+        }
+
+        const today = parseLocalDateOnly(new Date());
+        const checkInDay = parseLocalDateOnly(booking.checkInDate);
+        if (checkInDay && today >= checkInDay) {
+            return res.status(400).json({
+                success: false,
+                message: "Không thể hủy đơn đặt phòng khi đã đến hoặc qua ngày nhận phòng.",
+            });
         }
 
         booking.status = "cancelled";
